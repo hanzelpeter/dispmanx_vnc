@@ -23,6 +23,10 @@
 
 #define BPP      2
 
+#ifndef ALIGN_UP
+#define ALIGN_UP(x,y)  ((x + (y)-1) & ~((y)-1))
+#endif
+
 /* 15 frames per second (if we can) */
 #define PICTURE_TIMEOUT (1.0/15.0)
 
@@ -32,6 +36,8 @@ DISPMANX_MODEINFO_T         info;
 void                       *image;
 void 			   *back_image;
 
+int padded_width;
+int pitch;
 int r_x0, r_y0, r_x1, r_y1;
 
 /* for compatibility of non-android systems */
@@ -83,7 +89,7 @@ int TakePicture(unsigned char *buffer)
 	vc_dispmanx_snapshot(display, resource, transform);
 
 	vc_dispmanx_rect_set(&rect, 0, 0, info.width, info.height);
-	vc_dispmanx_resource_read_data(resource, &rect, image, info.width*2); 
+	vc_dispmanx_resource_read_data(resource, &rect, image, pitch); 
 
 	unsigned short *image_p = (unsigned short *)image;
 	unsigned short *buffer_p = (unsigned short *)buffer;
@@ -95,7 +101,7 @@ int TakePicture(unsigned char *buffer)
 	for (i=0; i<info.height && !found; i++)
 	{
 		for (j = 0; j<info.width; j++) {
-			if (back_image_p[i*info.width + j] != image_p[i*info.width + j])
+			if (back_image_p[i*padded_width + j] != image_p[i*padded_width + j])
 			{
 				r_y0 = i;
 				found  = 1;		
@@ -108,7 +114,7 @@ int TakePicture(unsigned char *buffer)
 	for (i=info.height-1; i>=r_y0 && !found; i--)
 	{
 		for (j = 0; j<info.width; j++) {
-			if (back_image_p[i*info.width + j] != image_p[i*info.width + j])
+			if (back_image_p[i*padded_width + j] != image_p[i*padded_width + j])
 			{
 				r_y1 = i+1;
 				found  = 1;		
@@ -121,7 +127,7 @@ int TakePicture(unsigned char *buffer)
 	for (i=0; i<info.width && !found; i++)
 	{
 		for (j = r_y0; j< r_y1; j++) {
-			if (back_image_p[j*info.width + i] != image_p[j*info.width + i])
+			if (back_image_p[j*padded_width + i] != image_p[j*padded_width + i])
 			{
 				r_x0 = i;
 				found  = 1;		
@@ -134,7 +140,7 @@ int TakePicture(unsigned char *buffer)
 	for (i=info.width-1; i>=r_x0 && !found; i--)
 	{
 		for (j = r_y0; j< r_y1; j++) {
-			if (back_image_p[j*info.width + i] != image_p[j*info.width + i])
+			if (back_image_p[j*padded_width + i] != image_p[j*padded_width + i])
 			{
 				r_x1 = i+1;
 				found  = 1;		
@@ -145,7 +151,7 @@ int TakePicture(unsigned char *buffer)
 
 	for(j=r_y0;j<r_y1;++j) {
 		for(i=r_x0;i<r_x1;++i) {
-			unsigned short	tbi = image_p[j*info.width + i]; 
+			unsigned short	tbi = image_p[j*padded_width + i]; 
 
 			unsigned short        R5 = (tbi >> 11); 
 			unsigned short       G5 = ((tbi >> 6) & 0x1f);
@@ -153,11 +159,14 @@ int TakePicture(unsigned char *buffer)
 
 			tbi = (B5 << 10) | (G5 << 5) | R5;
 
-			buffer_p[j*info.width +i] = tbi;
+			buffer_p[j*padded_width +i] = tbi;
 		}
 	}
 
-	memcpy(back_image, image, info.width*info.height*2);
+	/* swap image and back_image buffers */
+	void *tmp_image = back_image;
+	back_image = image;
+	image = tmp_image;
 
 	/*
 	* simulate the passage of time
@@ -487,13 +496,18 @@ int main(int argc, char *argv[])
 
 	ret = vc_dispmanx_display_get_info(display, &info);
 	assert(ret == 0);
+
+	/* DispmanX expects buffer rows to be aligned to a 32 bit boundarys */
+	pitch = ALIGN_UP(2 * info.width, 32);
+	padded_width = pitch/BPP;
+
 	printf( "Display is %d x %d\n", info.width, info.height );
 
-	image = calloc( 1, info.width * 2 * info.height );
+	image = calloc( 1, pitch * info.height );
 
 	assert(image);
 
-	back_image = calloc( 1, info.width * 2 * info.height );
+	back_image = calloc( 1, pitch * info.height );
 
 	assert(back_image);
 
@@ -506,11 +520,11 @@ int main(int argc, char *argv[])
 		&vc_image_ptr );
 
 
-	rfbScreenInfoPtr server=rfbGetScreen(&argc,argv,info.width,info.height,5,3,BPP);
+	rfbScreenInfoPtr server=rfbGetScreen(&argc,argv,padded_width,info.height,5,3,BPP);
 	if(!server)
 		return 0;
 	server->desktopName = "VNC server via dispmanx";
-	server->frameBuffer=(char*)malloc(info.width*info.height*BPP);
+	server->frameBuffer=(char*)malloc(pitch*info.height);
 	server->alwaysShared=(1==1);
 	server->kbdAddEvent = dokey;
 	server->ptrAddEvent = doptr;
