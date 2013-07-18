@@ -54,6 +54,10 @@ jmp_buf env;
 int ufile;
 int mouse_last = 0;
 
+int relative_mode = 0;
+int last_x;
+int last_y;
+
 /*
 * throttle camera updates
 */
@@ -225,9 +229,16 @@ void initUinput()
 	ioctl(ufile, UI_SET_KEYBIT, BTN_RIGHT);
 	ioctl(ufile, UI_SET_KEYBIT, BTN_MIDDLE);
 
-	ioctl(ufile, UI_SET_EVBIT, EV_ABS);
-	ioctl(ufile, UI_SET_ABSBIT, ABS_X);
-	ioctl(ufile, UI_SET_ABSBIT, ABS_Y);
+	if (relative_mode) {
+		ioctl(ufile, UI_SET_EVBIT, EV_REL);
+		ioctl(ufile, UI_SET_RELBIT, REL_X);
+		ioctl(ufile, UI_SET_RELBIT, REL_Y);
+	}
+	else {
+		ioctl(ufile, UI_SET_EVBIT, EV_ABS);
+		ioctl(ufile, UI_SET_ABSBIT, ABS_X);
+		ioctl(ufile, UI_SET_ABSBIT, ABS_Y);
+	}
 
 	retcode = write(ufile, &uinp, sizeof(uinp));
 	printf("First write returned %d.\n", retcode);
@@ -353,17 +364,34 @@ static void doptr(int buttonMask, int x, int y, rfbClientPtr cl)
 
 	memset(&event, 0, sizeof(event));
 	gettimeofday(&event.time, NULL);
-	event.type = EV_ABS;
-	event.code = ABS_X;
-	event.value = x;
+	if (relative_mode) {
+		event.type = EV_REL;
+		event.code = REL_X;
+		event.value = x - last_x;
+	}
+	else {
+		event.type = EV_ABS;
+		event.code = ABS_X;
+		event.value = x;
+	}
 	write(ufile, &event, sizeof(event));
 
 	memset(&event, 0, sizeof(event));
 	gettimeofday(&event.time, NULL);
-	event.type = EV_ABS;
-	event.code = ABS_Y;
-	event.value = y;
+	if (relative_mode) {
+		event.type = EV_REL;
+		event.code = REL_Y;
+		event.value = y - last_y;
+	}
+	else {
+		event.type = EV_ABS;
+		event.code = ABS_Y;
+		event.value = y;
+	}
 	write(ufile, &event, sizeof(event));
+
+	last_x = x;
+	last_y = y;
 
 	memset(&event, 0, sizeof(event));
 	gettimeofday(&event.time, NULL);
@@ -479,10 +507,17 @@ int main(int argc, char *argv[])
 
 	uint32_t                    vc_image_ptr;
 
-	int             		ret, end;
+	int             		ret, end, x;
 	long usec;
 
 	uint32_t        screen = 0;
+
+	for (x=1; x<argc; x++) {
+		if (strcmp(argv[x], "-r")==0)
+			relative_mode = 1;
+		if (strcmp(argv[x], "-a")==0)
+			relative_mode = 0;
+	}
 
 	if (signal(SIGINT, sig_handler) == SIG_ERR) {
 		fprintf(stderr, "error setting sighandler\n");
@@ -519,6 +554,8 @@ int main(int argc, char *argv[])
 		info.height,
 		&vc_image_ptr );
 
+	last_x = padded_width / 2;
+	last_y = info.height / 2;
 
 	rfbScreenInfoPtr server=rfbGetScreen(&argc,argv,padded_width,info.height,5,3,BPP);
 	if(!server)
