@@ -219,6 +219,13 @@ void initUinput()
 	uinp.id.version = 4;
 	uinp.id.bustype = BUS_USB;
 
+	if (!relative_mode) {
+		uinp.absmin[ABS_X] = 0;
+		uinp.absmax[ABS_X] = info.width;
+		uinp.absmin[ABS_Y] = 0;
+		uinp.absmax[ABS_Y] = info.height;
+	}
+
 	ioctl(ufile, UI_SET_EVBIT, EV_KEY);
 
 	for (i=0; i<KEY_MAX; i++) { //I believe this is to tell UINPUT what keys we can make?
