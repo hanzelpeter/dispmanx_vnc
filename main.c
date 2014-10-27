@@ -27,8 +27,8 @@
 #define ALIGN_UP(x,y)  ((x + (y)-1) & ~((y)-1))
 #endif
 
-/* 15 frames per second (if we can) */
-#define PICTURE_TIMEOUT (1.0/15.0)
+/* 5 frames per second (if we can) */
+#define PICTURE_TIMEOUT (1.0/5.0)
 
 DISPMANX_DISPLAY_HANDLE_T   display;
 DISPMANX_RESOURCE_HANDLE_T  resource;
@@ -38,7 +38,7 @@ void 			   *back_image;
 
 int padded_width;
 int pitch;
-int r_x0, r_y0, r_x1, r_y1;
+int r_x0=-1, r_y0=-1, r_x1=-1, r_y1=-1;
 
 /* for compatibility of non-android systems */
 #ifndef ANDROID
@@ -99,56 +99,58 @@ int TakePicture(unsigned char *buffer)
 	unsigned short *buffer_p = (unsigned short *)buffer;
 
 
-	// find y0, y1
-	found = 0;
-	unsigned short *back_image_p = (unsigned short *)back_image;
-	for (i=0; i<info.height && !found; i++)
-	{
-		for (j = 0; j<info.width; j++) {
-			if (back_image_p[i*padded_width + j] != image_p[i*padded_width + j])
-			{
-				r_y0 = i;
-				found  = 1;		
-				break;
+	if (r_y0==-1||r_y1==-1||r_x0==-1||r_x1==-1) {
+		// find y0, y1
+		found = 0;
+		unsigned short *back_image_p = (unsigned short *)back_image;
+		for (i=0; i<info.height && !found; i++)
+		{
+			for (j = 0; j<info.width; j++) {
+				if (back_image_p[i*padded_width + j] != image_p[i*padded_width + j])
+				{
+					r_y0 = i;
+					found  = 1;		
+					break;
+				}
 			}
 		}
-	}
 
-	found = 0;
-	for (i=info.height-1; i>=r_y0 && !found; i--)
-	{
-		for (j = 0; j<info.width; j++) {
-			if (back_image_p[i*padded_width + j] != image_p[i*padded_width + j])
-			{
-				r_y1 = i+1;
-				found  = 1;		
-				break;
+		found = 0;
+		for (i=info.height-1; i>=r_y0 && !found; i--)
+		{
+			for (j = 0; j<info.width; j++) {
+				if (back_image_p[i*padded_width + j] != image_p[i*padded_width + j])
+				{
+					r_y1 = i+1;
+					found  = 1;		
+					break;
+				}
 			}
 		}
-	}
 
-	found = 0;
-	for (i=0; i<info.width && !found; i++)
-	{
-		for (j = r_y0; j< r_y1; j++) {
-			if (back_image_p[j*padded_width + i] != image_p[j*padded_width + i])
-			{
-				r_x0 = i;
-				found  = 1;		
-				break;
+		found = 0;
+		for (i=0; i<info.width && !found; i++)
+		{
+			for (j = r_y0; j< r_y1; j++) {
+				if (back_image_p[j*padded_width + i] != image_p[j*padded_width + i])
+				{
+					r_x0 = i;
+					found  = 1;		
+					break;
+				}
 			}
 		}
-	}
 
-	found = 0;
-	for (i=info.width-1; i>=r_x0 && !found; i--)
-	{
-		for (j = r_y0; j< r_y1; j++) {
-			if (back_image_p[j*padded_width + i] != image_p[j*padded_width + i])
-			{
-				r_x1 = i+1;
-				found  = 1;		
-				break;
+		found = 0;
+		for (i=info.width-1; i>=r_x0 && !found; i--)
+		{
+			for (j = r_y0; j< r_y1; j++) {
+				if (back_image_p[j*padded_width + i] != image_p[j*padded_width + i])
+				{
+					r_x1 = i+1;
+					found  = 1;		
+					break;
+				}
 			}
 		}
 	}
