@@ -129,7 +129,6 @@ int TakePicture(unsigned char *buffer)
 			if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
 			{
 				r_y0 = i;
-				printf("Found y0 at %d       \n",i);
 				goto y0break;
 			}
 		}
@@ -142,7 +141,6 @@ y0break:
 		for (j = 0; j<lp_padding; j++) {
 			if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
 			{
-				printf("Found y1 at %d    \n",i+1);
 				r_y1 = i+1;		
 				goto y1break;
 			}
@@ -195,7 +193,7 @@ y1break:
 		for(j=r_y0;j<r_y1;j++) {
 			for(i=r_x0>>1;i<r_x1>>1;i++) {
 				register unsigned long tbi = image_lp[i + (j*lp_padding)]; 
-                buffer_lp[i + (j*lp_padding)] = tbi; /*| mask;*/
+				buffer_lp[i + (j*lp_padding)] = tbi; // | mask;
 			}
 		}
 	} else {
@@ -209,7 +207,7 @@ y1break:
 	image = tmp_image;
 
 	//fprintf(stderr, "x0=%d, y0=%d, x1=%d, y1=%d              \n", r_x0, r_y0, r_x1, r_y1); 
-	fprintf(stderr,"%03d fps - lines %3d dispmanx %f bounding box %f blitting %f \r",fps, r_y1 - r_y0, (stop - start)*1000.0,(a_stop - a_start)*1000.0, (b_stop - a_stop)*1000.0);
+	//fprintf(stderr,"%03d fps - lines %3d dispmanx %f bounding box %f blitting %f \r",fps, r_y1 - r_y0, (stop - start)*1000.0,(a_stop - a_start)*1000.0, (b_stop - a_stop)*1000.0);
 
 	/*
 	* simulate the passage of time
