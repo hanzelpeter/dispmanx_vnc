@@ -120,33 +120,36 @@ int TakePicture(unsigned char *buffer)
 
 	r_y0 = info.height-1;
 	r_y1 = 0;
-	for (i=0; i<info.height; i++)
+	r_x0 = info.width-1;
+	r_x1 = 0;
+
+	for (i=0; i<info.height-1; i++)
 	{
 		for (j = 0; j<lp_padding; j++) {
 			if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
 			{
 				r_y0 = i;
-				break;
+				printf("Found y0 at %d       \n",i);
+				goto y0break;
 			}
 		}
-		if(r_y0 != info.height-1) {
-			break;
-		}
 	}
+
+y0break:
 
 	for (i=info.height-1; i>=r_y0; i--)
 	{
 		for (j = 0; j<lp_padding; j++) {
-			if (back_image_lp[(i*lp_padding) + j] != image_p[(i*lp_padding) + j])
+			if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
 			{
+				printf("Found y1 at %d    \n",i+1);
 				r_y1 = i+1;		
-				break;
+				goto y1break;
 			}
 		}
-		if(r_y1 != 0) {
-			break;
-		}
 	}
+
+y1break:
 	r_x0 = 0;
 	r_x1 = info.width-1;
 /*	
@@ -181,12 +184,18 @@ int TakePicture(unsigned char *buffer)
 */
 	unsigned long mask = 0x0;
 	double a_stop = getTime();
+	if(fcount % 2 == 0) {
+		mask = 0xaaaaaaaa;
+	} else {
+		mask = 0x55555555;
+	}
+
 
 	if(r_y0 <= r_y1) {
 		for(j=r_y0;j<r_y1;j++) {
 			for(i=r_x0>>1;i<r_x1>>1;i++) {
 				register unsigned long tbi = image_lp[i + (j*lp_padding)]; 
-				buffer_lp[i + (j*lp_padding)] = tbi;
+                buffer_lp[i + (j*lp_padding)] = tbi; /*| mask;*/
 			}
 		}
 	} else {
@@ -200,7 +209,7 @@ int TakePicture(unsigned char *buffer)
 	image = tmp_image;
 
 	//fprintf(stderr, "x0=%d, y0=%d, x1=%d, y1=%d              \n", r_x0, r_y0, r_x1, r_y1); 
-	//fprintf(stderr,"%03d fps - lines %3d dispmanx %f bounding box %f blitting %f \r",fps, r_y1 - r_y0, (stop - start)*1000.0,(a_stop - a_start)*1000.0, (b_stop - a_stop)*1000.0);
+	fprintf(stderr,"%03d fps - lines %3d dispmanx %f bounding box %f blitting %f \r",fps, r_y1 - r_y0, (stop - start)*1000.0,(a_stop - a_start)*1000.0, (b_stop - a_stop)*1000.0);
 
 	/*
 	* simulate the passage of time
@@ -611,8 +620,8 @@ int main(int argc, char *argv[])
 	if(!server)
 		return 0;
 	server->desktopName = "VNC server via dispmanx";
-	server->frameBuffer = (char*)malloc(pitch*info.height);
-	server->alwaysShared = TRUE;
+	server->frameBuffer=(char*)malloc(pitch*info.height);
+	server->alwaysShared=(1==1);
 	server->kbdAddEvent = dokey;
 	server->ptrAddEvent = doptr;
 	server->serverFormat.redShift = 11;
@@ -646,6 +655,36 @@ int main(int argc, char *argv[])
 				}
 			}
 		} 
+
+		// Nasty experiments... 
+	/*	throttlectr++;
+		if(submitcounter > 1) {
+			if(submitcounter>20) {
+				adaptiveTimeout+=MIN_TIMEOUT;
+				if(adaptiveTimeout>MAX_TIMEOUT) {
+					adaptiveTimeout = MAX_TIMEOUT;
+				}
+				submitcounter-=20;
+				throttlectr=0;
+			}
+			//submitcounter = 0;
+			if(throttlectr > 100) {
+				adaptiveTimeout-=MIN_TIMEOUT;
+				if(adaptiveTimeout<MIN_TIMEOUT) {
+					adaptiveTimeout=MIN_TIMEOUT;
+				}
+				throttlectr=0;
+			}
+		} else {
+			if(throttlectr>100) {
+				adaptiveTimeout+=MIN_TIMEOUT;
+				if(adaptiveTimeout>MAX_TIMEOUT) {
+					adaptiveTimeout=MAX_TIMEOUT;
+				}
+				throttlectr=0;
+			}
+		}*/
+	//	fprintf(stderr, " %d timer %f            \r", submitcounter, adaptiveTimeout);
 
 		usec = server->deferUpdateTime*1000;
 		rfbProcessEvents(server,usec);
