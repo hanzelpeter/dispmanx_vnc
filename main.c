@@ -28,7 +28,10 @@
 #endif
 
 /* 15 frames per second (if we can) */
-#define PICTURE_TIMEOUT (1.0/15.0)
+#define MAX_TIMEOUT (1.0/4.0)
+#define MIN_TIMEOUT (1.0/15.0)
+
+double adaptiveTimeout = MIN_TIMEOUT;
 
 DISPMANX_DISPLAY_HANDLE_T   display;
 DISPMANX_RESOURCE_HANDLE_T  resource;
@@ -58,22 +61,26 @@ int relative_mode = 0;
 int last_x;
 int last_y;
 
+inline double getTime() {
+	static struct timeval now = {0,0};
+	gettimeofday(&now, NULL);
+	return now.tv_sec + (now.tv_usec/1000000.0);
+}
+
 /*
 * throttle camera updates
 */
 int TimeToTakePicture() {
-	static struct timeval now={0,0}, then={0,0};
-	double elapsed, dnow, dthen;
+	static double now = 0, then = 0;
+	double elapsed = 0;
 
-	gettimeofday(&now,NULL);
+	now = getTime();
+	elapsed = now - then;
 
-	dnow  = now.tv_sec  + (now.tv_usec /1000000.0);
-	dthen = then.tv_sec + (then.tv_usec/1000000.0);
-	elapsed = dnow - dthen;
-
-	if (elapsed > PICTURE_TIMEOUT)
-		memcpy((char *)&then, (char *)&now, sizeof(struct timeval));
-	return elapsed > PICTURE_TIMEOUT;
+	if (elapsed > adaptiveTimeout) {
+		then=now;
+	}
+	return elapsed > adaptiveTimeout;
 }
 
 /*
@@ -90,87 +97,110 @@ int TakePicture(unsigned char *buffer)
 	VC_IMAGE_TRANSFORM_T	transform = 0;
 	VC_RECT_T			rect;
 
+	double start = getTime();
 	vc_dispmanx_snapshot(display, resource, transform);
 
 	vc_dispmanx_rect_set(&rect, 0, 0, info.width, info.height);
 	vc_dispmanx_resource_read_data(resource, &rect, image, pitch); 
+	double stop = getTime();
 
+	
 	unsigned short *image_p = (unsigned short *)image;
 	unsigned short *buffer_p = (unsigned short *)buffer;
-
-
+	
 	// find y0, y1
-	found = 0;
 	unsigned short *back_image_p = (unsigned short *)back_image;
-	for (i=0; i<info.height && !found; i++)
+
+	unsigned long *image_lp = (unsigned long *)image_p;
+	unsigned long *buffer_lp = (unsigned long *)buffer_p;
+	unsigned long *back_image_lp = (unsigned long*)back_image_p;
+
+	int lp_padding = padded_width >> 1;
+	double a_start = getTime();
+
+	r_y0 = info.height-1;
+	r_y1 = 0;
+	for (i=0; i<info.height; i++)
 	{
-		for (j = 0; j<info.width; j++) {
-			if (back_image_p[i*padded_width + j] != image_p[i*padded_width + j])
+		for (j = 0; j<lp_padding; j++) {
+			if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
 			{
 				r_y0 = i;
-				found  = 1;		
 				break;
 			}
 		}
+		if(r_y0 != info.height-1) {
+			break;
+		}
 	}
 
-	found = 0;
-	for (i=info.height-1; i>=r_y0 && !found; i--)
+	for (i=info.height-1; i>=r_y0; i--)
 	{
-		for (j = 0; j<info.width; j++) {
-			if (back_image_p[i*padded_width + j] != image_p[i*padded_width + j])
+		for (j = 0; j<lp_padding; j++) {
+			if (back_image_lp[(i*lp_padding) + j] != image_p[(i*lp_padding) + j])
 			{
-				r_y1 = i+1;
-				found  = 1;		
+				r_y1 = i+1;		
 				break;
 			}
 		}
+		if(r_y1 != 0) {
+			break;
+		}
 	}
+	r_x0 = 0;
+	r_x1 = info.width-1;
+/*	
 
-	found = 0;
-	for (i=0; i<info.width && !found; i++)
+	for (i=0; i<lp_padding; i++)
 	{
-		for (j = r_y0; j< r_y1; j++) {
-			if (back_image_p[j*padded_width + i] != image_p[j*padded_width + i])
+		for (j = r_y0; j<(lp_padding*r_y1); j+=lp_padding) {
+			if (back_image_lp[j+i] - image_lp[j+i])
 			{
-				r_x0 = i;
-				found  = 1;		
+				r_x0 = i<<1;
 				break;
 			}
 		}
+		if(r_x0 != 0) {
+			break;
+		}
 	}
 
-	found = 0;
-	for (i=info.width-1; i>=r_x0 && !found; i--)
+	for (i=0; i<lp_padding; i++)
 	{
-		for (j = r_y0; j< r_y1; j++) {
-			if (back_image_p[j*padded_width + i] != image_p[j*padded_width + i])
+		for (j = r_y1; j>=(lp_padding*r_y0); j-=lp_padding) {
+			if (back_image_lp[j+i] - image_lp[j+i])
 			{
-				r_x1 = i+1;
-				found  = 1;		
+				r_x1 = i<<1;
 				break;
 			}
 		}
-	}
-
-	for(j=r_y0;j<r_y1;++j) {
-		for(i=r_x0;i<r_x1;++i) {
-			unsigned short	tbi = image_p[j*padded_width + i]; 
-
-			unsigned short        R5 = (tbi >> 11); 
-			unsigned short       G5 = ((tbi >> 6) & 0x1f);
-			unsigned short         B5 = tbi & 0x1f;
-
-			tbi = (B5 << 10) | (G5 << 5) | R5;
-
-			buffer_p[j*padded_width +i] = tbi;
+		if(r_x1 != 0) {
+			break;
 		}
 	}
+*/
+	unsigned long mask = 0x0;
+	double a_stop = getTime();
 
-	/* swap image and back_image buffers */
+	if(r_y0 <= r_y1) {
+		for(j=r_y0;j<r_y1;j++) {
+			for(i=r_x0>>1;i<r_x1>>1;i++) {
+				register unsigned long tbi = image_lp[i + (j*lp_padding)]; 
+				buffer_lp[i + (j*lp_padding)] = tbi;
+			}
+		}
+	} else {
+		r_y1 = r_y0;
+	}
+
+	double b_stop = getTime();
+
 	void *tmp_image = back_image;
 	back_image = image;
 	image = tmp_image;
+
+	//fprintf(stderr, "x0=%d, y0=%d, x1=%d, y1=%d              \n", r_x0, r_y0, r_x1, r_y1); 
+	//fprintf(stderr,"%03d fps - lines %3d dispmanx %f bounding box %f blitting %f \r",fps, r_y1 - r_y0, (stop - start)*1000.0,(a_stop - a_start)*1000.0, (b_stop - a_stop)*1000.0);
 
 	/*
 	* simulate the passage of time
@@ -182,18 +212,19 @@ int TakePicture(unsigned char *buffer)
 	line = now.tv_usec / (1000000/info.height);
 	if (line>info.height) line=info.height-1;
 	//memset(&buffer[(info.width * BPP) * line], 0, (info.width * BPP));
-	/* frames per second (informational only) */
+	// frames per second (informational only) 
 	fcount++;
+
 	if (last_line > line) {
 		fps = fcount;
 		fcount = 0;
 	}
 	last_line = line;
-	fprintf(stderr,"%03d/%03d Picture (%03d fps) ", line, info.height, fps);
+	//fprintf(stderr,"%03d/%03d Picture (%03d fps)\r", line, info.height, fps);
 
-	fprintf(stderr, "x0=%d, y0=%d, x1=%d, y1=%d              \r", r_x0, r_y0, r_x1, r_y1); 
+//	fprintf(stderr, "x0=%d, y0=%d, x1=%d, y1=%d              \r", r_x0, r_y0, r_x1, r_y1); 
 	/* success!   We have a new picture! */
-	return (1==1);
+	return r_y0!=r_y1;
 }
 
 void sig_handler(int signo)
@@ -260,21 +291,26 @@ void initUinput()
 
 static int keysym2scancode(rfbKeySym key)
 {
-	//printf("keysym: %04X\n", key);
 
 	int scancode = 0;
 
 	int code = (int) key;
 	if (code>='0' && code<='9') {
+		printf("keysym: digit");
+
 		scancode = (code & 0xF) - 1;
 		if (scancode<0) scancode += 10;
 		scancode += KEY_1;
 	} else if (code>=0xFF50 && code<=0xFF58) {
+		printf("keysym: arrow");
+
 		static const uint16_t map[] =
 		{  KEY_HOME, KEY_LEFT, KEY_UP, KEY_RIGHT, KEY_DOWN,
 		KEY_PAGEUP, KEY_PAGEDOWN, KEY_END, 0 };
 		scancode = map[code & 0xF];
 	} else if (code>=0xFFE1 && code<=0xFFEE) {
+		printf("keysym: modifier");
+
 		static const uint16_t map[] =
 		{  KEY_LEFTSHIFT, KEY_LEFTSHIFT,
 		KEY_LEFTCTRL, KEY_LEFTCTRL,
@@ -284,6 +320,8 @@ static int keysym2scancode(rfbKeySym key)
 		0, 0, 0, 0 };
 		scancode = map[code & 0xF];
 	} else if ((code>='A' && code<='Z') || (code>='a' && code<='z')) {
+		printf("keysym: char");
+
 		static const uint16_t map[] = {
 			KEY_A, KEY_B, KEY_C, KEY_D, KEY_E,
 			KEY_F, KEY_G, KEY_H, KEY_I, KEY_J,
@@ -292,72 +330,76 @@ static int keysym2scancode(rfbKeySym key)
 			KEY_U, KEY_V, KEY_W, KEY_X, KEY_Y, KEY_Z };
 		scancode = map[(code & 0x5F) - 'A'];
 	} else {
+		printf("keysym: special");
+
 		switch (code) {
-		case XK_space:    scancode = KEY_SPACE;       break;
+			case XK_space:    scancode = KEY_SPACE;       break;
 
-		case XK_exclam: scancode = KEY_1; break;
-		case XK_at:     scancode         = KEY_2; break;
-		case XK_numbersign:    scancode      = KEY_3; break;
-		case XK_dollar:    scancode  = KEY_4; break;
-		case XK_percent:    scancode = KEY_5; break;
-		case XK_asciicircum:    scancode     = KEY_6; break;
-		case XK_ampersand:    scancode       = KEY_7; break;
-		case XK_asterisk:    scancode        = KEY_8; break;
-		case XK_parenleft:    scancode       = KEY_9; break;
-		case XK_parenright:    scancode      = KEY_0; break;
-		case XK_minus:    scancode   = KEY_MINUS; break;
-		case XK_underscore:    scancode      = KEY_MINUS; break;
-		case XK_equal:    scancode   = KEY_EQUAL; break;
-		case XK_plus:    scancode    = KEY_EQUAL; break;
-		case XK_BackSpace:    scancode       = KEY_BACKSPACE; break;
-		case XK_Tab:    scancode             = KEY_TAB; break;
+			case XK_exclam: scancode = KEY_1; break;
+			case XK_at:     scancode         = KEY_2; break;
+			case XK_numbersign:    scancode      = KEY_3; break;
+			case XK_dollar:    scancode  = KEY_4; break;
+			case XK_percent:    scancode = KEY_5; break;
+			case XK_asciicircum:    scancode     = KEY_6; break;
+			case XK_ampersand:    scancode       = KEY_7; break;
+			case XK_asterisk:    scancode        = KEY_8; break;
+			case XK_parenleft:    scancode       = KEY_9; break;
+			case XK_parenright:    scancode      = KEY_0; break;
+			case XK_minus:    scancode   = KEY_MINUS; break;
+			case XK_underscore:    scancode      = KEY_MINUS; break;
+			case XK_equal:    scancode   = KEY_EQUAL; break;
+			case XK_plus:    scancode    = KEY_EQUAL; break;
+			case XK_BackSpace:    scancode       = KEY_BACKSPACE; break;
+			case XK_Tab:    scancode             = KEY_TAB; break;
 
-		case XK_braceleft:    scancode        = KEY_LEFTBRACE;     break;
-		case XK_braceright:    scancode       = KEY_RIGHTBRACE;     break;
-		case XK_bracketleft:    scancode      = KEY_LEFTBRACE;     break;
-		case XK_bracketright:    scancode     = KEY_RIGHTBRACE;     break;
-		case XK_Return:    scancode  = KEY_ENTER;     break;
+			case XK_braceleft:    scancode        = KEY_LEFTBRACE;     break;
+			case XK_braceright:    scancode       = KEY_RIGHTBRACE;     break;
+			case XK_bracketleft:    scancode      = KEY_LEFTBRACE;     break;
+			case XK_bracketright:    scancode     = KEY_RIGHTBRACE;     break;
+			case XK_Return:    scancode  = KEY_ENTER;     break;
 
-		case XK_semicolon:    scancode        = KEY_SEMICOLON;     break;
-		case XK_colon:    scancode    = KEY_SEMICOLON;     break;
-		case XK_apostrophe:    scancode       = KEY_APOSTROPHE;     break;
-		case XK_quotedbl:    scancode         = KEY_APOSTROPHE;     break;
-		case XK_grave:    scancode    = KEY_GRAVE;     break;    
-		case XK_asciitilde:    scancode       = KEY_GRAVE;     break;
-		case XK_backslash:    scancode        = KEY_BACKSLASH;     break;
-		case XK_bar:    scancode              = KEY_BACKSLASH;     break;
+			case XK_semicolon:    scancode        = KEY_SEMICOLON;     break;
+			case XK_colon:    scancode    = KEY_SEMICOLON;     break;
+			case XK_apostrophe:    scancode       = KEY_APOSTROPHE;     break;
+			case XK_quotedbl:    scancode         = KEY_APOSTROPHE;     break;
+			case XK_grave:    scancode    = KEY_GRAVE;     break;    
+			case XK_asciitilde:    scancode       = KEY_GRAVE;     break;
+			case XK_backslash:    scancode        = KEY_BACKSLASH;     break;
+			case XK_bar:    scancode              = KEY_BACKSLASH;     break;
 
-		case XK_comma:    scancode    = KEY_COMMA;      break;
-		case XK_less:    scancode     = KEY_COMMA;      break;
-		case XK_period:    scancode   = KEY_DOT;      break;
-		case XK_greater:    scancode  = KEY_DOT;      break;
-		case XK_slash:    scancode    = KEY_SLASH;      break;
-		case XK_question:    scancode         = KEY_SLASH;      break;
-		case XK_Caps_Lock:    scancode        = KEY_CAPSLOCK;      break;
+			case XK_comma:    scancode    = KEY_COMMA;      break;
+			case XK_less:    scancode     = KEY_COMMA;      break;
+			case XK_period:    scancode   = KEY_DOT;      break;
+			case XK_greater:    scancode  = KEY_DOT;      break;
+			case XK_slash:    scancode    = KEY_SLASH;      break;
+			case XK_question:    scancode         = KEY_SLASH;      break;
+			case XK_Caps_Lock:    scancode        = KEY_CAPSLOCK;      break;
 
-		case XK_F1:    scancode               = KEY_F1; break;
-		case XK_F2:    scancode               = KEY_F2; break;
-		case XK_F3:    scancode               = KEY_F3; break;
-		case XK_F4:    scancode               = KEY_F4; break;
-		case XK_F5:    scancode               = KEY_F5; break;
-		case XK_F6:    scancode               = KEY_F6; break;
-		case XK_F7:    scancode               = KEY_F7; break;
-		case XK_F8:    scancode               = KEY_F8; break;
-		case XK_F9:    scancode               = KEY_F9; break;
-		case XK_F10:    scancode              = KEY_F10; break;
-		case XK_Num_Lock:    scancode         = KEY_NUMLOCK; break;
-		case XK_Scroll_Lock:    scancode      = KEY_SCROLLLOCK; break;
+			case XK_F1:    scancode               = KEY_F1; break;
+			case XK_F2:    scancode               = KEY_F2; break;
+			case XK_F3:    scancode               = KEY_F3; break;
+			case XK_F4:    scancode               = KEY_F4; break;
+			case XK_F5:    scancode               = KEY_F5; break;
+			case XK_F6:    scancode               = KEY_F6; break;
+			case XK_F7:    scancode               = KEY_F7; break;
+			case XK_F8:    scancode               = KEY_F8; break;
+			case XK_F9:    scancode               = KEY_F9; break;
+			case XK_F10:    scancode              = KEY_F10; break;
+			case XK_Num_Lock:    scancode         = KEY_NUMLOCK; break;
+			case XK_Scroll_Lock:    scancode      = KEY_SCROLLLOCK; break;
 
-		case XK_Page_Down:    scancode        = KEY_PAGEDOWN; break;
-		case XK_Insert:    scancode   = KEY_INSERT; break;
-		case XK_Delete:    scancode   = KEY_DELETE; break;
-		case XK_Page_Up:    scancode  = KEY_PAGEUP; break;
-		case XK_Escape:    scancode   = KEY_ESC; break;
-
-
-		case 0x0003:    scancode = KEY_CENTER;      break;
+			case XK_Page_Down:    scancode        = KEY_PAGEDOWN; break;
+			case XK_Insert:    scancode   = KEY_INSERT; break;
+			case XK_Delete:    scancode   = KEY_DELETE; break;
+			case XK_Page_Up:    scancode  = KEY_PAGEUP; break;
+			case XK_Escape:    scancode   = KEY_ESC; break;
+			case 0x0003:    scancode = KEY_CENTER;      break;
+			default: 
+				printf("Unknown key.");
+				break;
 		}
 	}
+	printf("keysym: %04X -> %04X\n", key, scancode);
 
 	return scancode;
 }
@@ -518,6 +560,7 @@ int main(int argc, char *argv[])
 	long usec;
 
 	uint32_t        screen = 0;
+ 	long throttlectr = 0, submitcounter = 0;
 
 	for (x=1; x<argc; x++) {
 		if (strcmp(argv[x], "-r")==0)
@@ -568,17 +611,19 @@ int main(int argc, char *argv[])
 	if(!server)
 		return 0;
 	server->desktopName = "VNC server via dispmanx";
-	server->frameBuffer=(char*)malloc(pitch*info.height);
-	server->alwaysShared=(1==1);
+	server->frameBuffer = (char*)malloc(pitch*info.height);
+	server->alwaysShared = TRUE;
 	server->kbdAddEvent = dokey;
 	server->ptrAddEvent = doptr;
-
+	server->serverFormat.redShift = 11;
+	server->serverFormat.blueShift = 0;
+	server->serverFormat.greenShift = 6;
 	printf("Server bpp:%d\n", server->serverFormat.bitsPerPixel);
 	printf("Server bigEndian:%d\n", server->serverFormat.bigEndian);
 	printf("Server redShift:%d\n", server->serverFormat.redShift);
 	printf("Server blueShift:%d\n", server->serverFormat.blueShift);
 	printf("Server greeShift:%d\n", server->serverFormat.greenShift);
-
+	printf("server->deferUpdateTime %d\n", server->deferUpdateTime);
 	/* Initialize the server */
 	rfbInitServer(server);
 
@@ -590,9 +635,17 @@ int main(int argc, char *argv[])
 
 	/* Loop, processing clients and taking pictures */
 	while (rfbIsActive(server)) {
-		if (TimeToTakePicture())
-			if (TakePicture((unsigned char *)server->frameBuffer))
+		if (TimeToTakePicture()) {
+			if (TakePicture((unsigned char *)server->frameBuffer)) {
 				rfbMarkRectAsModified(server,r_x0,r_y0,r_x1, r_y1);
+				submitcounter++;
+			} else {
+				submitcounter--;
+				if(submitcounter<0) {
+					submitcounter=0;
+				}
+			}
+		} 
 
 		usec = server->deferUpdateTime*1000;
 		rfbProcessEvents(server,usec);
