@@ -396,7 +396,6 @@ public:
 		int line = 0;
 		int i, j;
 		struct timeval now;
-		int found;
 
 		DISPMANX_TRANSFORM_T	transform = (DISPMANX_TRANSFORM_T)0;
 		VC_RECT_T			rect;
@@ -410,72 +409,85 @@ public:
 		unsigned short *buffer_p = (unsigned short *)buffer;
 
 
-		// find y0, y1
-		found = 0;
+
 		unsigned short *back_image_p = (unsigned short *)back_image;
-		for (i = 0; i<info.height; i++)
+
+		unsigned long *image_lp = (unsigned long *)image_p;
+		unsigned long *buffer_lp = (unsigned long *)buffer_p;
+		unsigned long *back_image_lp = (unsigned long*)back_image_p;
+
+		int lp_padding = padded_width >> 1;
+
+		r_y0 = info.height - 1;
+		r_y1 = 0;
+		r_x0 = info.width - 1;
+		r_x1 = 0;
+
+		for (i = 0; i<info.height - 1; i++)
 		{
-			for (j = 0; j<info.width; j++) {
-				int pos = i * padded_width + j;
-				if (back_image_p[pos] != image_p[pos])
+			for (j = 0; j<lp_padding; j++) {
+				if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
 				{
 					r_y0 = i;
-					found = 1;
-					goto a1;
+					goto y0break;
 				}
 			}
 		}
-	a1:
+
+	y0break:
 
 		for (i = info.height - 1; i >= r_y0; i--)
 		{
-			for (j = 0; j<info.width; j++) {
-				int pos = i * padded_width + j;
-				if (back_image_p[pos] != image_p[pos])
+			for (j = 0; j<lp_padding; j++) {
+				if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
 				{
 					r_y1 = i + 1;
-					found = 1;
-					goto a2;
+					goto y1break;
 				}
 			}
 		}
-	a2:
 
-		for (i = 0; i<info.width && !found; i++)
+	y1break:
+		r_x0 = 0;
+		r_x1 = info.width - 1;
+		/*
+		for (i=0; i<lp_padding; i++)
 		{
-			for (j = r_y0; j< r_y1; j++) {
-				int pos = j * padded_width + i;
-				if (back_image_p[pos] != image_p[pos])
-				{
-					r_x0 = i;
-					found = 1;
-					goto a3;
-				}
-			}
-		}
-	a3:
-
-		for (i = info.width - 1; i >= r_x0; i--)
+		for (j = r_y0; j<(lp_padding*r_y1); j+=lp_padding) {
+		if (back_image_lp[j+i] - image_lp[j+i])
 		{
-			for (j = r_y0; j< r_y1; j++) {
-				int pos = j * padded_width + i;
-				if (back_image_p[pos] != image_p[pos])
-				{
-					r_x1 = i + 1;
-					found = 1;
-					goto a4;
-				}
-			}
+		r_x0 = i<<1;
+		break;
 		}
-	a4:
-
-		if (!found) {
-			r_x0 = r_y0 = 0;
-			r_x1 = r_y1 = 0;
-			//return (1==1);
+		}
+		if(r_x0 != 0) {
+		break;
+		}
+		}
+		for (i=0; i<lp_padding; i++)
+		{
+		for (j = r_y1; j>=(lp_padding*r_y0); j-=lp_padding) {
+		if (back_image_lp[j+i] - image_lp[j+i])
+		{
+		r_x1 = i<<1;
+		break;
+		}
+		}
+		if(r_x1 != 0) {
+		break;
+		}
+		}
+		*/
+		unsigned long mask = 0x0;
+		if (fcount % 2 == 0) {
+			mask = 0xaaaaaaaa;
 		}
 		else {
+			mask = 0x55555555;
+		}
 
+
+		if (r_y0 <= r_y1) {
 			for (j = r_y0; j<r_y1; ++j) {
 				for (i = r_x0; i<r_x1; ++i) {
 					int pos = j * padded_width + i;
@@ -490,9 +502,19 @@ public:
 					buffer_p[pos] = tbi;
 				}
 			}
+
+			// This didn't work, colors were not correct
+			/*for (j = r_y0; j < r_y1; j++) {
+				for (i = r_x0 >> 1; i<r_x1 >> 1; i++) {
+					register unsigned long tbi = image_lp[i + (j*lp_padding)];
+					buffer_lp[i + (j*lp_padding)] = tbi; // | mask;
+				}
+			}*/
+		}
+		else {
+			r_y1 = r_y0;
 		}
 
-		/* swap image and back_image buffers */
 		void *tmp_image = back_image;
 		back_image = image;
 		image = tmp_image;
@@ -522,7 +544,7 @@ public:
 
 		/* success!   We have a new picture! */
 		//return (1==1);
-		return (found);
+		return (r_y0 != r_y1);
 	}
 
 	int keysym2scancode(rfbKeySym key)
