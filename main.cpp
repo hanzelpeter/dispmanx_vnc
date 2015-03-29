@@ -279,10 +279,26 @@ public:
 
 	void Init()
 	{
+		DISPMANX_MODEINFO_T info = { 0 };
+
 		m_display.Open(screen);
 		m_display.GetInfo(info);
 
 		printf("info: %d, %d, %d, %d\n", info.width, info.height, info.transform, info.input_format);
+
+		if (info.width != this->info.width || info.height != this->info.height)
+		{
+			if (image) {
+				free(image);
+				image = nullptr;
+			}
+			if (back_image) {
+				free(back_image);
+				back_image = nullptr;
+			}
+		}
+
+		this->info = info;
 
 		/* DispmanX expects buffer rows to be aligned to a 32 bit boundarys */
 		pitch = ALIGN_UP(2 * info.width, 32);
@@ -290,11 +306,15 @@ public:
 
 		printf("Display is %d x %d\n", info.width, info.height);
 
-		image = calloc(1, pitch * info.height);
-		assert(image);
+		if (!image) {
+			image = calloc(1, pitch * info.height);
+			assert(image);
+		}
 
-		back_image = calloc(1, pitch * info.height);
-		assert(back_image);
+		if (!back_image) {
+			back_image = calloc(1, pitch * info.height);
+			assert(back_image);
+		}
 
 		r_x0 = r_y0 = 0;
 		r_x1 = info.width;
@@ -350,23 +370,35 @@ public:
 		/* Loop, processing clients and taking pictures */
 		while (!terminate && rfbIsActive(server)) {
 			if (clients && TimeToTakePicture()) {
-				try
-				{
+				try {
 					if (TakePicture((unsigned char *)server->frameBuffer)) {
 						rfbMarkRectAsModified(server, r_x0, r_y0, r_x1, r_y1);
 					}
 				}
-				catch (Exception& e)
-				{
+				catch (Exception& e) {
 					std::cerr << "Caught exception: " << e.what() << "\n";
 					Close();
 					Init();
+
+					if (info.width != server->width || info.height != server->height) {
+						void *oldFrameBuffer = server->frameBuffer;
+						char *frameBuffer = (char*)malloc(pitch*info.height);
+						rfbNewFramebuffer(server, frameBuffer, padded_width, info.height, 5, 3, BPP);
+						free(oldFrameBuffer);
+					}
 				}
 			}
 
 			usec = server->deferUpdateTime * 1000;
 			rfbProcessEvents(server, usec);
 		}
+
+		rfbShutdownServer(server, TRUE);
+		void *oldFrameBuffer = server->frameBuffer;
+		rfbScreenCleanup(server);
+		free(oldFrameBuffer);
+
+		bcm_host_deinit();
 	}
 
 	/*
@@ -407,9 +439,6 @@ public:
 
 		unsigned short *image_p = (unsigned short *)image;
 		unsigned short *buffer_p = (unsigned short *)buffer;
-
-
-
 		unsigned short *back_image_p = (unsigned short *)back_image;
 
 		unsigned long *image_lp = (unsigned long *)image_p;
@@ -423,84 +452,51 @@ public:
 		r_x0 = info.width - 1;
 		r_x1 = 0;
 
-		for (i = 0; i<info.height - 1; i++)
-		{
-			for (j = 0; j<lp_padding; j++) {
-				if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
-				{
-					r_y0 = i;
-					goto y0break;
-				}
+		for (i = 0; i < info.height - 1; i++) {
+			if (!std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
+				r_y0 = i;
+				break;
 			}
 		}
 
-	y0break:
-
-		for (i = info.height - 1; i >= r_y0; i--)
-		{
-			for (j = 0; j<lp_padding; j++) {
-				if (back_image_lp[(i*lp_padding) + j] - image_lp[(i*lp_padding) + j])
-				{
-					r_y1 = i + 1;
-					goto y1break;
-				}
+		for (i = info.height - 1; i >= r_y0; i--) {
+			if( !std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
+				r_y1 = i + 1;
+				break;
 			}
+
 		}
 
-	y1break:
 		r_x0 = 0;
 		r_x1 = info.width - 1;
-		/*
-		for (i=0; i<lp_padding; i++)
-		{
-		for (j = r_y0; j<(lp_padding*r_y1); j+=lp_padding) {
-		if (back_image_lp[j+i] - image_lp[j+i])
-		{
-		r_x0 = i<<1;
-		break;
-		}
-		}
-		if(r_x0 != 0) {
-		break;
-		}
-		}
-		for (i=0; i<lp_padding; i++)
-		{
-		for (j = r_y1; j>=(lp_padding*r_y0); j-=lp_padding) {
-		if (back_image_lp[j+i] - image_lp[j+i])
-		{
-		r_x1 = i<<1;
-		break;
-		}
-		}
-		if(r_x1 != 0) {
-		break;
-		}
-		}
-		*/
-		unsigned long mask = 0x0;
-		if (fcount % 2 == 0) {
-			mask = 0xaaaaaaaa;
-		}
-		else {
-			mask = 0x55555555;
-		}
-
 
 		if (r_y0 <= r_y1) {
 			for (j = r_y0; j<r_y1; ++j) {
 				for (i = r_x0; i<r_x1; ++i) {
 					int pos = j * padded_width + i;
 					unsigned short	tbi = image_p[pos];
-
-					unsigned short        R5 = (tbi >> 11);
-					unsigned short       G5 = ((tbi >> 6) & 0x1f);
-					unsigned short         B5 = tbi & 0x1f;
-
-					tbi = (B5 << 10) | (G5 << 5) | R5;
-
-					buffer_p[pos] = tbi;
+					unsigned short val;
+					val = ((tbi & 0b11111) << 10);
+					val |= ((tbi & 0b11111000000) >> 1);
+					val |= (tbi >> 11);
+					buffer_p[pos] = val;
 				}
+				/*
+				for (i = 0; i<lp_padding; i++) {
+				int pos = j * lp_padding + i;
+				unsigned long tbi = image_lp[pos];
+				unsigned long val;
+
+				val = ((tbi & 0b11111) << 10);
+				val |= ((tbi & 0b11111000000) >> 1);
+				val |= ((tbi & 0x0000ffff)>> 11);
+
+				val |= ((tbi & 0b111110000000000000000) << 10);
+				val |= ((tbi & 0b111110000000000000000000000) >> 1);
+				val |= ((tbi & 0b11111000000000000000000000000000) >> 11);
+
+				buffer_lp[pos] = val;
+				}*/
 			}
 
 			// This didn't work, colors were not correct
@@ -543,7 +539,6 @@ public:
 		}
 
 		/* success!   We have a new picture! */
-		//return (1==1);
 		return (r_y0 != r_y1);
 	}
 
@@ -734,7 +729,7 @@ private:
 	DMXResource m_resource;
 	UFile m_ufile;
 
-	DISPMANX_MODEINFO_T info;
+	DISPMANX_MODEINFO_T info = { 0 };
 	int relativeMode = 0;
 	int screen = 0;
 
@@ -758,8 +753,7 @@ int main(int argc, char *argv[])
 {
 	try
 	{
-		uint32_t        screen = 0;
-
+		uint32_t screen = 0;
 		int relativeMode = 0;
 
 		for (int x = 1; x < argc; x++) {
@@ -779,7 +773,7 @@ int main(int argc, char *argv[])
 	}
 	catch (Exception& e)
 	{
-		std::cout << "Exception caught: " << e.what() << "\n";
+		std::cerr << "Exception caught: " << e.what() << "\n";
 	}
 
 	printf("\nDone\n");
