@@ -332,7 +332,7 @@ public:
 		m_display.Close();
 	}
 
-	void Run( int argc, char *argv[], int screen, int relativeMode)
+	void Run(int argc, char *argv[], int port, const char *password, int screen, int relativeMode)
 	{
 		int             		ret, end, x;
 		long usec;
@@ -347,6 +347,17 @@ public:
 		rfbScreenInfoPtr server = rfbGetScreen(&argc, argv, padded_width, info.height, 5, 3, BPP);
 		if (!server)
 			throw Exception( "rfbGetScreen failed");
+
+		if (port){
+			server->port = port;
+		}
+
+		if (*password) {
+			static const char *passwords[] = { nullptr, nullptr };
+			passwords[0] = password;
+			server->authPasswdData = (void *)passwords;
+			server->passwordCheck = rfbCheckPasswordByList;
+		}
 
 		server->desktopName = "VNC server via dispmanx";
 		server->frameBuffer = (char*)malloc(pitch*info.height);
@@ -755,12 +766,22 @@ int main(int argc, char *argv[])
 	{
 		uint32_t screen = 0;
 		int relativeMode = 0;
+		const char *password = "";
+		int port = 0;
 
 		for (int x = 1; x < argc; x++) {
 			if (strcmp(argv[x], "-r") == 0)
 				relativeMode = 1;
 			if (strcmp(argv[x], "-a") == 0)
 				relativeMode = 0;
+			if (strcmp(argv[x], "-P") == 0) {
+				password = argv[x + 1];
+				x++;
+			}
+			if (strcmp(argv[x], "-p") == 0) {
+				port = atoi(argv[x + 1]);
+				x++;
+			}
 		}
 
 		if (signal(SIGINT, sig_handler) == SIG_ERR) {
@@ -769,7 +790,7 @@ int main(int argc, char *argv[])
 		}
 
 		DMXVNCServer vncServer;
-		vncServer.Run( argc, argv, screen, relativeMode);
+		vncServer.Run( argc, argv, port, password, screen, relativeMode);
 	}
 	catch (Exception& e)
 	{
