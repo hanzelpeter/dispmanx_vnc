@@ -359,7 +359,15 @@ public:
 			server->passwordCheck = rfbCheckPasswordByList;
 		}
 
-		server->desktopName = "VNC server via dispmanx";
+		char hostname[HOST_NAME_MAX + 1];
+		char desktopName[HOST_NAME_MAX * 2 + 1];
+		if (0 == gethostname(hostname, sizeof(hostname))){
+			sprintf(desktopName, "%s : dispmanx%d", hostname, screen);
+			server->desktopName = desktopName;
+		}
+		else
+			server->desktopName = "VNC server via dispmanx";
+
 		server->frameBuffer = (char*)malloc(pitch*info.height);
 		server->alwaysShared = (1 == 1);
 		server->kbdAddEvent = dokey;
