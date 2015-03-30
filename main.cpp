@@ -6,7 +6,10 @@
 #include <string.h>
 
 #include <iostream>
+#include <vector>
+#include <algorithm>
 #include <exception>
+#include <string>
 
 #include <rfb/rfb.h>
 #include <rfb/keysym.h>
@@ -45,26 +48,6 @@ int terminate = 0;
 #endif
 
 
-int mouse_last = 0;
-
-int last_x;
-int last_y;
-
-
-static int clients = 0;
-
-static void clientgone(rfbClientPtr cl)
-{
-	clients--;
-}
-
-static enum rfbNewClientAction newclient(rfbClientPtr cl)
-{
-	clients++;
-	cl->clientGoneHook = clientgone;
-	return RFB_CLIENT_ACCEPT;
-}
-
 void sig_handler(int signo)
 {
 	terminate = 1;
@@ -74,13 +57,10 @@ class Exception : public std::exception
 {
 public:
 	Exception(const char *whatString)
-		: m_whatString(whatString)
-	{
-
+		: m_whatString(whatString) {
 	}
 
-	const char *what() const noexcept override
-	{
+	const char *what() const noexcept override {
 		return m_whatString;
 	}
 
@@ -187,15 +167,14 @@ public:
 	void Create(VC_IMAGE_TYPE_T type, int width, int height, uint32_t *vc_image_ptr)
 	{
 		m_resource = vc_dispmanx_resource_create(type, width, height, vc_image_ptr);
-		if (!m_resource)
+		if (m_resource == DISPMANX_NO_HANDLE)
 			throw Exception("vc_dispmanx_resource_create failed");
 	}
 
 	void Close()
 	{
-		if (m_resource)
-		{
-			int ret = vc_dispmanx_resource_delete(m_resource);
+		if (m_resource != DISPMANX_NO_HANDLE) {
+			vc_dispmanx_resource_delete(m_resource);
 			m_resource = DISPMANX_NO_HANDLE;
 		}
 	}
@@ -226,19 +205,22 @@ public:
 	{
 		printf("Open display[%i]...\n", screen);
 		m_display = vc_dispmanx_display_open(screen);
-		if (m_display == DISPMANX_NO_HANDLE || m_display == DISPMANX_INVALID)
-		{
+		if (m_display == DISPMANX_NO_HANDLE)
 			throw Exception("vc_dispmanx_display_open failed");
-		}
 	}
 
 	void Close()
 	{
 		if (m_display != DISPMANX_NO_HANDLE)
 		{
-			int ret = vc_dispmanx_display_close(m_display);
+			vc_dispmanx_display_close(m_display);
 			m_display = DISPMANX_NO_HANDLE;
 		}
+	}
+
+	bool IsOpen()
+	{
+		return m_display != DISPMANX_NO_HANDLE;
 	}
 
 	void GetInfo(DISPMANX_MODEINFO_T& info)
@@ -259,6 +241,15 @@ private:
 	DISPMANX_DISPLAY_HANDLE_T m_display = DISPMANX_NO_HANDLE;
 };
 
+struct BCMHost
+{
+	BCMHost() {
+		bcm_host_init();
+	}
+	~BCMHost() {
+		bcm_host_deinit();
+	}
+};
 
 class DMXVNCServer
 {
@@ -266,39 +257,19 @@ public:
 	~DMXVNCServer()
 	{
 		Close();
-		if (image) {
-			free(image);
-			image = nullptr;
-		}
-
-		if (back_image){
-			free(back_image);
-			back_image = nullptr;
+		if (server) {
+			rfbShutdownServer(server, TRUE);
+			rfbScreenCleanup(server);
+			server = nullptr;
 		}
 	}
 
-	void Init()
+	void Open()
 	{
-		DISPMANX_MODEINFO_T info = { 0 };
-
 		m_display.Open(screen);
 		m_display.GetInfo(info);
 
 		printf("info: %d, %d, %d, %d\n", info.width, info.height, info.transform, info.input_format);
-
-		if (info.width != this->info.width || info.height != this->info.height)
-		{
-			if (image) {
-				free(image);
-				image = nullptr;
-			}
-			if (back_image) {
-				free(back_image);
-				back_image = nullptr;
-			}
-		}
-
-		this->info = info;
 
 		/* DispmanX expects buffer rows to be aligned to a 32 bit boundarys */
 		pitch = ALIGN_UP(2 * info.width, 32);
@@ -306,15 +277,12 @@ public:
 
 		printf("Display is %d x %d\n", info.width, info.height);
 
-		if (!image) {
-			image = calloc(1, pitch * info.height);
-			assert(image);
-		}
-
-		if (!back_image) {
-			back_image = calloc(1, pitch * info.height);
-			assert(back_image);
-		}
+		imageBuffer1.resize(pitch * info.height);
+		std::fill(imageBuffer1.begin(), imageBuffer1.end(), '\0');
+		imageBuffer2.resize(pitch * info.height);
+		std::fill(imageBuffer2.begin(), imageBuffer2.end(), '\0');
+		image = &imageBuffer1[0];
+		back_image = &imageBuffer2[0];
 
 		r_x0 = r_y0 = 0;
 		r_x1 = info.width;
@@ -330,21 +298,29 @@ public:
 	{
 		m_resource.Close();
 		m_display.Close();
+		imageBuffer1.resize(0);
+		imageBuffer2.resize(0);
+		image = nullptr;
+		back_image = nullptr;
 	}
 
-	void Run(int argc, char *argv[], int port, const char *password, int screen, int relativeMode)
+	bool IsOpen()
 	{
-		int             		ret, end, x;
+		return m_display.IsOpen();
+	}
+
+	void Run(int argc, char *argv[], int port, const char *password, int screen, int relativeMode, bool safeMode, bool bandwidthMode)
+	{
 		long usec;
 
 		this->relativeMode = relativeMode;
+		this->safeMode = safeMode;
+		this->bandwidthMode = bandwidthMode;
 		this->screen = screen;
 
-		bcm_host_init();
+		Open();
 
-		Init();
-
-		rfbScreenInfoPtr server = rfbGetScreen(&argc, argv, padded_width, info.height, 5, 3, BPP);
+		server = rfbGetScreen(&argc, argv, padded_width, info.height, 5, 3, BPP);
 		if (!server)
 			throw Exception( "rfbGetScreen failed");
 
@@ -353,28 +329,35 @@ public:
 		}
 
 		if (*password) {
-			static const char *passwords[] = { nullptr, nullptr };
-			passwords[0] = password;
+			this->password = password;
+			passwords[0] = this->password.c_str();
 			server->authPasswdData = (void *)passwords;
 			server->passwordCheck = rfbCheckPasswordByList;
 		}
 
 		char hostname[HOST_NAME_MAX + 1];
-		char desktopName[HOST_NAME_MAX * 2 + 1];
 		if (0 == gethostname(hostname, sizeof(hostname))){
-			sprintf(desktopName, "%s : dispmanx%d", hostname, screen);
-			server->desktopName = desktopName;
+			desktopName = hostname;
+			desktopName += " : ";
+			desktopName += std::to_string(screen);
+			server->desktopName = desktopName.c_str();
 		}
 		else
 			server->desktopName = "VNC server via dispmanx";
 
-		server->frameBuffer = (char*)malloc(pitch*info.height);
+		frameBuffer.resize(pitch*info.height);
+		server->frameBuffer = (char*)&frameBuffer[0];
 		server->alwaysShared = (1 == 1);
 		server->kbdAddEvent = dokey;
 		server->ptrAddEvent = doptr;
 		server->newClientHook = newclient;
 		server->screenData = this;
 
+		/*
+		server->serverFormat.redShift = 11;
+		server->serverFormat.blueShift = 0;
+		server->serverFormat.greenShift = 6;
+		*/
 		printf("Server bpp:%d\n", server->serverFormat.bitsPerPixel);
 		printf("Server bigEndian:%d\n", server->serverFormat.bigEndian);
 		printf("Server redShift:%d\n", server->serverFormat.redShift);
@@ -387,37 +370,42 @@ public:
 		m_ufile.Open(this->relativeMode, info.width, info.height);
 
 		/* Loop, processing clients and taking pictures */
+		int errors = 0;
 		while (!terminate && rfbIsActive(server)) {
 			if (clients && TimeToTakePicture()) {
 				try {
+					if (!IsOpen())
+					{
+						Open();
+						if (info.width != server->width || info.height != server->height) {
+							frameBuffer.resize(pitch*info.height);
+							rfbNewFramebuffer(server, &frameBuffer[0], padded_width, info.height, 5, 3, BPP);
+						}
+					}
+
 					if (TakePicture((unsigned char *)server->frameBuffer)) {
 						rfbMarkRectAsModified(server, r_x0, r_y0, r_x1, r_y1);
 					}
+					errors = 0;
 				}
 				catch (Exception& e) {
 					std::cerr << "Caught exception: " << e.what() << "\n";
+					errors++;
+					if (errors > 10)
+						throw e;
 					Close();
-					Init();
-
-					if (info.width != server->width || info.height != server->height) {
-						void *oldFrameBuffer = server->frameBuffer;
-						char *frameBuffer = (char*)malloc(pitch*info.height);
-						rfbNewFramebuffer(server, frameBuffer, padded_width, info.height, 5, 3, BPP);
-						free(oldFrameBuffer);
-					}
 				}
+			}
+
+			if (!clients)
+			{
+				if (IsOpen())
+					Close();
 			}
 
 			usec = server->deferUpdateTime * 1000;
 			rfbProcessEvents(server, usec);
 		}
-
-		rfbShutdownServer(server, TRUE);
-		void *oldFrameBuffer = server->frameBuffer;
-		rfbScreenCleanup(server);
-		free(oldFrameBuffer);
-
-		bcm_host_deinit();
 	}
 
 	/*
@@ -438,6 +426,11 @@ public:
 		return elapsed > PICTURE_TIMEOUT;
 	}
 
+	double getTime() {
+		static struct timeval now = { 0, 0 };
+		gettimeofday(&now, NULL);
+		return now.tv_sec + (now.tv_usec / 1000000.0);
+	}
 	/*
 	* simulate grabbing a picture from some device
 	*/
@@ -445,94 +438,113 @@ public:
 	{
 		static int last_line = 0, fps = 0, fcount = 0;
 		int line = 0;
-		int i, j;
 		struct timeval now;
 
 		DISPMANX_TRANSFORM_T	transform = (DISPMANX_TRANSFORM_T)0;
 		VC_RECT_T			rect;
+
+		if (safeMode)
+		{
+			DISPMANX_MODEINFO_T info;
+			m_display.GetInfo(info);
+			if (info.width != this->info.width || info.height != this->info.height)
+				throw Exception("New mode detected");
+		}
 
 		m_display.Snapshot(m_resource, transform);
 
 		vc_dispmanx_rect_set(&rect, 0, 0, info.width, info.height);
 		m_resource.ReadData(rect, image, pitch);
 
-		unsigned short *image_p = (unsigned short *)image;
-		unsigned short *buffer_p = (unsigned short *)buffer;
-		unsigned short *back_image_p = (unsigned short *)back_image;
-
-		unsigned long *image_lp = (unsigned long *)image_p;
-		unsigned long *buffer_lp = (unsigned long *)buffer_p;
-		unsigned long *back_image_lp = (unsigned long*)back_image_p;
+		unsigned long *image_lp = (unsigned long *)image;
+		unsigned long *buffer_lp = (unsigned long *)buffer;
+		unsigned long *back_image_lp = (unsigned long*)back_image;
 
 		int lp_padding = padded_width >> 1;
 
-		r_y0 = info.height - 1;
-		r_y1 = 0;
-		r_x0 = info.width - 1;
-		r_x1 = 0;
+		if (bandwidthMode){
+			r_y0 = info.height;
+			r_y1 = -1;
+			r_x0 = info.width / 2;
+			r_x1 = -1;
 
-		for (i = 0; i < info.height - 1; i++) {
-			if (!std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
-				r_y0 = i;
-				break;
-			}
-		}
+			for (int y = 0; y < info.height; y++) {
+				for (int x = 0; x < (info.width / 2); x++) {
+					if (back_image_lp[y * lp_padding + x] != image_lp[y * lp_padding + x]) {
 
-		for (i = info.height - 1; i >= r_y0; i--) {
-			if( !std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
-				r_y1 = i + 1;
-				break;
-			}
+						if (r_y0 == info.height) {
+							r_y0 = r_y1 = y;
+							r_x0 = r_x1 = x;
+						}
+						else {
+							if (y > r_y1) r_y1 = y;
+							if (x < r_x0) r_x0 = x;
+							if (x > r_x1) r_x1 = x;
+						}
 
-		}
-
-		r_x0 = 0;
-		r_x1 = info.width - 1;
-
-		if (r_y0 <= r_y1) {
-			for (j = r_y0; j<r_y1; ++j) {
-				for (i = r_x0; i<r_x1; ++i) {
-					int pos = j * padded_width + i;
-					unsigned short	tbi = image_p[pos];
-					unsigned short val;
-					val = ((tbi & 0b11111) << 10);
-					val |= ((tbi & 0b11111000000) >> 1);
-					val |= (tbi >> 11);
-					buffer_p[pos] = val;
+						unsigned long tbi = image_lp[y * lp_padding + x];
+						buffer_lp[y * lp_padding + x] =
+							((tbi & 0b11111) << 10) |
+							((tbi & 0b11111000000) >> 1) |
+							((tbi & 0x0000ffff) >> 11) |
+							((tbi & 0b111110000000000000000) << 10) |
+							((tbi & 0b111110000000000000000000000) >> 1) |
+							((tbi & 0b11111000000000000000000000000000) >> 11);
+					}
 				}
-				/*
-				for (i = 0; i<lp_padding; i++) {
-				int pos = j * lp_padding + i;
-				unsigned long tbi = image_lp[pos];
-				unsigned long val;
-
-				val = ((tbi & 0b11111) << 10);
-				val |= ((tbi & 0b11111000000) >> 1);
-				val |= ((tbi & 0x0000ffff)>> 11);
-
-				val |= ((tbi & 0b111110000000000000000) << 10);
-				val |= ((tbi & 0b111110000000000000000000000) >> 1);
-				val |= ((tbi & 0b11111000000000000000000000000000) >> 11);
-
-				buffer_lp[pos] = val;
-				}*/
 			}
 
-			// This didn't work, colors were not correct
-			/*for (j = r_y0; j < r_y1; j++) {
-				for (i = r_x0 >> 1; i<r_x1 >> 1; i++) {
-					register unsigned long tbi = image_lp[i + (j*lp_padding)];
-					buffer_lp[i + (j*lp_padding)] = tbi; // | mask;
-				}
-			}*/
+			if (r_y0 == info.height){
+				r_x0 = r_x1 = r_y0 = r_y1 = 0;
+			}
+			else{
+				r_x1 = (r_x1 + 1) * 2;
+				r_y1++;
+			}
+
 		}
 		else {
-			r_y1 = r_y0;
+
+			r_y0 = info.height - 1;
+			r_y1 = 0;
+			r_x0 = info.width - 1;
+			r_x1 = 0;
+
+			for (int i = 0; i < info.height - 1; i++) {
+				if (!std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
+					r_y0 = i;
+					break;
+				}
+			}
+
+			for (int i = info.height - 1; i >= r_y0; i--) {
+				if (!std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
+					r_y1 = i + 1;
+					break;
+				}
+			}
+
+			r_x0 = 0;
+			r_x1 = info.width - 1;
+
+			if (r_y0 < r_y1) {
+				std::transform(image_lp + (r_y0 * lp_padding), image_lp + (r_y1 * lp_padding - 1), buffer_lp + (r_y0 * lp_padding),
+					[](unsigned long tbi){
+					return
+						((tbi & 0b11111) << 10) |
+						((tbi & 0b11111000000) >> 1) |
+						((tbi & 0x0000ffff) >> 11) |
+						((tbi & 0b111110000000000000000) << 10) |
+						((tbi & 0b111110000000000000000000000) >> 1) |
+						((tbi & 0b11111000000000000000000000000000) >> 11);
+				});
+			}
+			else {
+				r_x0 = r_x1 = r_y0 = r_y1 = 0;
+			}
 		}
 
-		void *tmp_image = back_image;
-		back_image = image;
-		image = tmp_image;
+		std::swap(back_image, image);
 
 		gettimeofday(&now, NULL);
 		line = now.tv_usec / (1000000 / info.height);
@@ -731,8 +743,6 @@ public:
 
 	void DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 	{
-		struct input_event       event;
-
 		if (down) {
 			m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 1);
 			m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
@@ -743,13 +753,50 @@ public:
 		}
 	}
 
+	static enum rfbNewClientAction newclient(rfbClientPtr cl)
+	{
+		return ((DMXVNCServer *)(cl->screen->screenData))->NewClient(cl);
+	}
+
+	enum rfbNewClientAction NewClient(rfbClientPtr cl)
+	{
+		clients++;
+		cl->clientGoneHook = clientgone;
+		return RFB_CLIENT_ACCEPT;
+	}
+
+	static void clientgone(rfbClientPtr cl)
+	{
+		((DMXVNCServer *)(cl->screen->screenData))->ClientGone(cl);
+	}
+
+	void ClientGone(rfbClientPtr cl)
+	{
+		clients--;
+	}
+
 private:
+	BCMHost m_bcmHost;
 	DMXDisplay m_display;
 	DMXResource m_resource;
 	UFile m_ufile;
+	rfbScreenInfoPtr server = nullptr;
+
+	std::string desktopName;
+	const char *passwords[2] = { nullptr, nullptr };
+	std::string password;
+	int clients = 0;
+
+	std::vector<char> frameBuffer;
+	std::vector<char> imageBuffer1;
+	std::vector<char> imageBuffer2;
+	void *image = nullptr;
+	void *back_image = nullptr;
 
 	DISPMANX_MODEINFO_T info = { 0 };
 	int relativeMode = 0;
+	bool safeMode = false;
+	bool bandwidthMode = false;
 	int screen = 0;
 
 	int padded_width = 0;
@@ -759,14 +806,13 @@ private:
 	int r_x1 = 0;
 	int r_y1 = 0;
 
+	int mouse_last = 0;
+	int last_x = 0;
+	int last_y = 0;
+
 	VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
 	uint32_t  vc_image_ptr = 0;
-
-	void *image = nullptr;
-	void *back_image = nullptr;
 };
-
-
 
 int main(int argc, char *argv[])
 {
@@ -776,18 +822,28 @@ int main(int argc, char *argv[])
 		int relativeMode = 0;
 		const char *password = "";
 		int port = 0;
+		bool safeMode = false;
+		bool bandwidthMode = false;
 
 		for (int x = 1; x < argc; x++) {
 			if (strcmp(argv[x], "-r") == 0)
 				relativeMode = 1;
 			if (strcmp(argv[x], "-a") == 0)
 				relativeMode = 0;
+			if (strcmp(argv[x], "-f") == 0)
+				safeMode = true;
+			if (strcmp(argv[x], "-b") == 0)
+				bandwidthMode = true;
 			if (strcmp(argv[x], "-P") == 0) {
 				password = argv[x + 1];
 				x++;
 			}
 			if (strcmp(argv[x], "-p") == 0) {
 				port = atoi(argv[x + 1]);
+				x++;
+			}
+			if (strcmp(argv[x], "-s") == 0) {
+				screen = atoi(argv[x + 1]);
 				x++;
 			}
 		}
@@ -798,7 +854,7 @@ int main(int argc, char *argv[])
 		}
 
 		DMXVNCServer vncServer;
-		vncServer.Run( argc, argv, port, password, screen, relativeMode);
+		vncServer.Run( argc, argv, port, password, screen, relativeMode, safeMode, bandwidthMode);
 	}
 	catch (Exception& e)
 	{
