@@ -7,7 +7,9 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <exception>
+#include <string>
 
 #include <rfb/rfb.h>
 #include <rfb/keysym.h>
@@ -423,6 +425,11 @@ public:
 		return elapsed > PICTURE_TIMEOUT;
 	}
 
+	double getTime() {
+		static struct timeval now = { 0, 0 };
+		gettimeofday(&now, NULL);
+		return now.tv_sec + (now.tv_usec / 1000000.0);
+	}
 	/*
 	* simulate grabbing a picture from some device
 	*/
@@ -430,7 +437,6 @@ public:
 	{
 		static int last_line = 0, fps = 0, fcount = 0;
 		int line = 0;
-		int i, j;
 		struct timeval now;
 
 		DISPMANX_TRANSFORM_T	transform = (DISPMANX_TRANSFORM_T)0;
@@ -449,13 +455,9 @@ public:
 		vc_dispmanx_rect_set(&rect, 0, 0, info.width, info.height);
 		m_resource.ReadData(rect, image, pitch);
 
-		unsigned short *image_p = (unsigned short *)image;
-		unsigned short *buffer_p = (unsigned short *)buffer;
-		unsigned short *back_image_p = (unsigned short *)back_image;
-
-		unsigned long *image_lp = (unsigned long *)image_p;
-		//unsigned long *buffer_lp = (unsigned long *)buffer_p;
-		unsigned long *back_image_lp = (unsigned long*)back_image_p;
+		unsigned long *image_lp = (unsigned long *)image;
+		unsigned long *buffer_lp = (unsigned long *)buffer;
+		unsigned long *back_image_lp = (unsigned long*)back_image;
 
 		int lp_padding = padded_width >> 1;
 
@@ -464,14 +466,14 @@ public:
 		r_x0 = info.width - 1;
 		r_x1 = 0;
 
-		for (i = 0; i < info.height - 1; i++) {
+		for (int i = 0; i < info.height - 1; i++) {
 			if (!std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
 				r_y0 = i;
 				break;
 			}
 		}
 
-		for (i = info.height - 1; i >= r_y0; i--) {
+		for (int i = info.height - 1; i >= r_y0; i--) {
 			if( !std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
 				r_y1 = i + 1;
 				break;
@@ -481,44 +483,17 @@ public:
 		r_x0 = 0;
 		r_x1 = info.width - 1;
 
-		if (r_y0 <= r_y1) {
-			for (i = r_y0; i<r_y1; ++i) {
-				//std::copy(image_lp + i * lp_padding, image_lp + i * lp_padding + lp_padding - 1, buffer_lp + i * lp_padding);
-				for (j = r_x0; j<r_x1; ++j) {
-					int pos = i * padded_width + j;
-					unsigned short	tbi = image_p[pos];
-					unsigned short val;
-					val = ((tbi & 0b11111) << 10);
-					val |= ((tbi & 0b11111000000) >> 1);
-					val |= (tbi >> 11);
-					//if (buffer_p[pos] != val)
-						buffer_p[pos] = val;
-				}
-				/*
-				for (i = 0; i<lp_padding; i++) {
-				int pos = j * lp_padding + i;
-				unsigned long tbi = image_lp[pos];
-				unsigned long val;
-
-				val = ((tbi & 0b11111) << 10);
-				val |= ((tbi & 0b11111000000) >> 1);
-				val |= ((tbi & 0x0000ffff)>> 11);
-
-				val |= ((tbi & 0b111110000000000000000) << 10);
-				val |= ((tbi & 0b111110000000000000000000000) >> 1);
-				val |= ((tbi & 0b11111000000000000000000000000000) >> 11);
-
-				buffer_lp[pos] = val;
-				}*/
-			}
-
-			// This didn't work, colors were not correct
-			/*for (j = r_y0; j < r_y1; j++) {
-				for (i = r_x0 >> 1; i<r_x1 >> 1; i++) {
-					register unsigned long tbi = image_lp[i + (j*lp_padding)];
-					buffer_lp[i + (j*lp_padding)] = tbi; // | mask;
-				}
-			}*/
+		if (r_y0 < r_y1) {
+			std::transform(image_lp + (r_y0 * lp_padding), image_lp + (r_y1 * lp_padding - 1), buffer_lp + (r_y0 * lp_padding),
+				[](unsigned long tbi){
+				return
+					((tbi & 0b11111) << 10) |
+					((tbi & 0b11111000000) >> 1) |
+					((tbi & 0x0000ffff) >> 11) |
+					((tbi & 0b111110000000000000000) << 10) |
+					((tbi & 0b111110000000000000000000000) >> 1) |
+					((tbi & 0b11111000000000000000000000000000) >> 11);
+			});
 		}
 		else {
 			r_x0 = r_x1 = r_y0 = r_y1 = 0;
