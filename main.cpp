@@ -309,12 +309,13 @@ public:
 		return m_display.IsOpen();
 	}
 
-	void Run(int argc, char *argv[], int port, const char *password, int screen, int relativeMode, bool safeMode)
+	void Run(int argc, char *argv[], int port, const char *password, int screen, int relativeMode, bool safeMode, bool bandwidthMode)
 	{
 		long usec;
 
 		this->relativeMode = relativeMode;
 		this->safeMode = safeMode;
+		this->bandwidthMode = bandwidthMode;
 		this->screen = screen;
 
 		Open();
@@ -461,42 +462,86 @@ public:
 
 		int lp_padding = padded_width >> 1;
 
-		r_y0 = info.height - 1;
-		r_y1 = 0;
-		r_x0 = info.width - 1;
-		r_x1 = 0;
+		if (bandwidthMode){
+			r_y0 = info.height;
+			r_y1 = -1;
+			r_x0 = info.width / 2;
+			r_x1 = -1;
 
-		for (int i = 0; i < info.height - 1; i++) {
-			if (!std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
-				r_y0 = i;
-				break;
+			for (int y = 0; y < info.height; y++) {
+				for (int x = 0; x < (info.width / 2); x++) {
+					if (back_image_lp[y * lp_padding + x] != image_lp[y * lp_padding + x]) {
+
+						if (r_y0 == info.height) {
+							r_y0 = r_y1 = y;
+							r_x0 = r_x1 = x;
+						}
+						else {
+							if (y > r_y1) r_y1 = y;
+							if (x < r_x0) r_x0 = x;
+							if (x > r_x1) r_x1 = x;
+						}
+
+						unsigned long tbi = image_lp[y * lp_padding + x];
+						buffer_lp[y * lp_padding + x] =
+							((tbi & 0b11111) << 10) |
+							((tbi & 0b11111000000) >> 1) |
+							((tbi & 0x0000ffff) >> 11) |
+							((tbi & 0b111110000000000000000) << 10) |
+							((tbi & 0b111110000000000000000000000) >> 1) |
+							((tbi & 0b11111000000000000000000000000000) >> 11);
+					}
+				}
 			}
-		}
 
-		for (int i = info.height - 1; i >= r_y0; i--) {
-			if( !std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
-				r_y1 = i + 1;
-				break;
+			if (r_y0 == info.height){
+				r_x0 = r_x1 = r_y0 = r_y1 = 0;
 			}
-		}
+			else{
+				r_x1 = (r_x1 + 1) * 2;
+				r_y1++;
+			}
 
-		r_x0 = 0;
-		r_x1 = info.width - 1;
-
-		if (r_y0 < r_y1) {
-			std::transform(image_lp + (r_y0 * lp_padding), image_lp + (r_y1 * lp_padding - 1), buffer_lp + (r_y0 * lp_padding),
-				[](unsigned long tbi){
-				return
-					((tbi & 0b11111) << 10) |
-					((tbi & 0b11111000000) >> 1) |
-					((tbi & 0x0000ffff) >> 11) |
-					((tbi & 0b111110000000000000000) << 10) |
-					((tbi & 0b111110000000000000000000000) >> 1) |
-					((tbi & 0b11111000000000000000000000000000) >> 11);
-			});
 		}
 		else {
-			r_x0 = r_x1 = r_y0 = r_y1 = 0;
+
+			r_y0 = info.height - 1;
+			r_y1 = 0;
+			r_x0 = info.width - 1;
+			r_x1 = 0;
+
+			for (int i = 0; i < info.height - 1; i++) {
+				if (!std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
+					r_y0 = i;
+					break;
+				}
+			}
+
+			for (int i = info.height - 1; i >= r_y0; i--) {
+				if (!std::equal(back_image_lp + i * lp_padding, back_image_lp + i * lp_padding + lp_padding - 1, image_lp + i * lp_padding)) {
+					r_y1 = i + 1;
+					break;
+				}
+			}
+
+			r_x0 = 0;
+			r_x1 = info.width - 1;
+
+			if (r_y0 < r_y1) {
+				std::transform(image_lp + (r_y0 * lp_padding), image_lp + (r_y1 * lp_padding - 1), buffer_lp + (r_y0 * lp_padding),
+					[](unsigned long tbi){
+					return
+						((tbi & 0b11111) << 10) |
+						((tbi & 0b11111000000) >> 1) |
+						((tbi & 0x0000ffff) >> 11) |
+						((tbi & 0b111110000000000000000) << 10) |
+						((tbi & 0b111110000000000000000000000) >> 1) |
+						((tbi & 0b11111000000000000000000000000000) >> 11);
+				});
+			}
+			else {
+				r_x0 = r_x1 = r_y0 = r_y1 = 0;
+			}
 		}
 
 		std::swap(back_image, image);
@@ -751,6 +796,7 @@ private:
 	DISPMANX_MODEINFO_T info = { 0 };
 	int relativeMode = 0;
 	bool safeMode = false;
+	bool bandwidthMode = false;
 	int screen = 0;
 
 	int padded_width = 0;
@@ -777,6 +823,7 @@ int main(int argc, char *argv[])
 		const char *password = "";
 		int port = 0;
 		bool safeMode = false;
+		bool bandwidthMode = false;
 
 		for (int x = 1; x < argc; x++) {
 			if (strcmp(argv[x], "-r") == 0)
@@ -785,6 +832,8 @@ int main(int argc, char *argv[])
 				relativeMode = 0;
 			if (strcmp(argv[x], "-f") == 0)
 				safeMode = true;
+			if (strcmp(argv[x], "-b") == 0)
+				bandwidthMode = true;
 			if (strcmp(argv[x], "-P") == 0) {
 				password = argv[x + 1];
 				x++;
@@ -805,7 +854,7 @@ int main(int argc, char *argv[])
 		}
 
 		DMXVNCServer vncServer;
-		vncServer.Run( argc, argv, port, password, screen, relativeMode, safeMode);
+		vncServer.Run( argc, argv, port, password, screen, relativeMode, safeMode, bandwidthMode);
 	}
 	catch (Exception& e)
 	{
