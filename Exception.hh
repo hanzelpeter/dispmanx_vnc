@@ -1,3 +1,6 @@
+#ifndef EXCEPTION_HH__
+#define EXCEPTION_HH__
+
 #include <exception>
 
 class Exception : public std::exception
@@ -14,3 +17,5 @@ public:
 private:
 	const char *m_whatString = "";
 };
+
+#endif // EXCEPTION_HH

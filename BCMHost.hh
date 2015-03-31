@@ -1,3 +1,8 @@
+#ifndef BCMHOST_HH
+#define BCMHOST_HH
+
+#include "bcm_host.h"
+
 class BCMHost
 {
 public:
@@ -8,3 +13,5 @@ public:
 		bcm_host_deinit();
 	}
 };
+
+#endif // BCMHOST_HH

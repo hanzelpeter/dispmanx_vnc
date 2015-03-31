@@ -6,19 +6,10 @@
 #include <string.h>
 
 #include <iostream>
-#include <vector>
-#include <algorithm>
-#include <string>
 
-#include <signal.h>
-#include <setjmp.h>
 #include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include "bcm_host.h"
 #include <assert.h>
 
 #include "Exception.hh"
@@ -27,10 +18,6 @@
 #include "DMXDisplay.hh"
 #include "DMXVNCServer.hh"
 #define BPP      2
-
-#ifndef ALIGN_UP
-#define ALIGN_UP(x,y)  ((x + (y)-1) & ~((y)-1))
-#endif
 
 /* 15 frames per second (if we can) */
 #define PICTURE_TIMEOUT (1.0/15.0)

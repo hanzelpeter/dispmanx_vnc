@@ -5,7 +5,11 @@ INCLUDES = -I/opt/vc/include/ -I/opt/vc/include/interface/vcos/pthreads -I/opt/v
 LIB_PATHS = -L/opt/vc/lib/
 LIBS = -lGLESv2 -lEGL -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lpthread -lrt -lvncserver
 
-SOURCES = main.cpp
+SOURCES = main.cpp \
+		UFile.cpp \
+		DMXResource.cpp \
+		DMXDisplay.cpp \
+		DMXVNCServer.cpp
 
 OBJS = $(SOURCES:.cpp=.o)
 
