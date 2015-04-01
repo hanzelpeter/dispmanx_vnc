@@ -22,7 +22,7 @@ public:
 	void Open();
 	void Close();
 	bool IsOpen();
-	void Run(int argc, char *argv[], int port, const char *password, int screen, int relativeMode, bool safeMode, bool bandwidthMode);
+	void Run(int argc, char *argv[], int port, const std::string& password, int screen, int relativeMode, bool safeMode, bool bandwidthMode);
 	int TimeToTakePicture();
 	double getTime();
 	int TakePicture(unsigned char *buffer);

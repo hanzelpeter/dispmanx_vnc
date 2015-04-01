@@ -77,7 +77,7 @@ bool DMXVNCServer::IsOpen()
 	return m_display.IsOpen();
 }
 
-void DMXVNCServer::Run(int argc, char *argv[], int port, const char *password, int screen, int relativeMode, bool safeMode, bool bandwidthMode)
+void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& password, int screen, int relativeMode, bool safeMode, bool bandwidthMode)
 {
 	long usec;
 
@@ -96,7 +96,7 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const char *password, i
 		server->port = port;
 	}
 
-	if (*password) {
+	if (password.length()) {
 		this->password = password;
 		passwords[0] = this->password.c_str();
 		server->authPasswdData = (void *)passwords;

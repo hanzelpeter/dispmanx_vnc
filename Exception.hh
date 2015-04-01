@@ -6,6 +6,9 @@
 class Exception : public std::exception
 {
 public:
+	Exception() {
+	}
+
 	Exception(const char *whatString)
 		: m_whatString(whatString) {
 	};
@@ -16,6 +19,14 @@ public:
 
 private:
 	const char *m_whatString = "";
+};
+
+class HelpException : public Exception
+{
+};
+
+class ParamException : public Exception
+{
 };
 
 #endif // EXCEPTION_HH
