@@ -43,14 +43,14 @@ int main(int argc, char *argv[])
 		int relativeMode = 0;
 		std::string password;
 		int port = 0;
-		bool safeMode = false;
-		bool bandwidthMode = false;
+		bool safeMode = true;
+		bool bandwidthMode = true;
 
 		static struct option long_options[] = {
 			{ "relative", no_argument, nullptr, 'r' },
 			{ "absolute", no_argument, nullptr, 'a' },
-			{ "safe", no_argument, nullptr, 'f' },
-			{ "bandwidth", no_argument, nullptr, 'b' },
+			{ "unsafe", no_argument, nullptr, 'u' },
+			{ "fullscreen", no_argument, nullptr, 'f' },
 			{ "password", required_argument, nullptr, 'P' },
 			{ "port", required_argument, nullptr, 'p' },
 			{ "screen", required_argument, nullptr, 's' },
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 		};
 
 		int c;
-		while (-1 != (c = getopt_long(argc, argv, "abfP:p:rs:", long_options, nullptr))) {
+		while (-1 != (c = getopt_long(argc, argv, "abfP:p:rs:u", long_options, nullptr))) {
 			switch (c) {
 			case 'a':
 				relativeMode = 0;
@@ -69,12 +69,12 @@ int main(int argc, char *argv[])
 				relativeMode = 1;
 				break;
 
-			case 'f':
-				safeMode = 1;
+			case 'u':
+				safeMode = false;
 				break;
 
-			case 'b':
-				bandwidthMode = 1;
+			case 'f':
+				bandwidthMode = false;
 				break;
 
 			case 'P':
@@ -126,12 +126,12 @@ void usage(const char *programName)
 		"Usage: " << programName << " [OPTION]...\n"
 		"\n"
 		"  -a, --absolute               absolute mouse movements\n"
-		"  -b, --bandwidth              saves bandwidth at a small performance penalty\n"
-		"  -f, --safe                   more robust handling of resoltion change at a\n"
-		"                               small performance penalty\n"
+		"  -f, --fullscreen             always runs fullscreen mode\n"
 		"  -p, --port=PORT              makes vnc available on the speficied port\n"
 		"  -P, --password=PASSWORD      protects the session with PASSWORD\n"
 		"  -r, --relative               relative mouse movements\n"
 		"  -s, --screen=SCREEN          opens the specified screen number\n"
+		"  -u, --unsafe                 disables more robust handling of resolution\n"
+		"                               change at a small performance gain\n"
 		"      --help                   displays this help and exit\n";
 }
