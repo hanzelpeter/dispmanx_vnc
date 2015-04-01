@@ -14,6 +14,37 @@
 #include "DMXResource.hh"
 #include "UFile.hh"
 
+class ImageMap
+{
+public:
+	void Resize(int height, int width);
+	void Clear();
+	int GetChangedRegionRatio();
+
+	int pixelsPerRegion = 50;
+	int height = 0;
+	int width = 0;
+	int mapWidth = 0;
+	int mapHeight = 0;
+	std::vector<bool> imageMap;
+};
+
+class BandwidthController
+{
+public:
+	void ControlMode(int changedRegionRatio);
+
+	int smallUpdateFramesSize = 10;
+	int largeUpdateFramesSize = 30;
+
+	int smallUpdateFramesSwitchCount = 5;
+	int largeUpdateFramesSwitchCount = 5;
+
+	int largeUpdateFrames = 0;
+	int smallUpdateFrames = 0;
+	bool largeFrameMode = false;
+};
+
 class DMXVNCServer
 {
 public:
@@ -50,6 +81,9 @@ private:
 	std::string password;
 	int clients = 0;
 
+	BandwidthController bandwidthController;
+
+	ImageMap imageMap;
 	std::vector<char> frameBuffer;
 	std::vector<char> imageBuffer1;
 	std::vector<char> imageBuffer2;

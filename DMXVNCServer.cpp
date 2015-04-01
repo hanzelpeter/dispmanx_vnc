@@ -2,6 +2,8 @@
 
 #include "Exception.hh"
 
+#undef max
+
 #ifndef ALIGN_UP
 #define ALIGN_UP(x,y)  ((x + (y)-1) & ~((y)-1))
 #endif
@@ -137,6 +139,9 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 
 	m_ufile.Open(this->relativeMode, info.width, info.height);
 
+	if (bandwidthMode)
+		imageMap.Resize(info.height, info.width);
+
 	/* Loop, processing clients and taking pictures */
 	int errors = 0;
 	while (!terminate && rfbIsActive(server)) {
@@ -148,12 +153,34 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 					if (info.width != server->width || info.height != server->height) {
 						frameBuffer.resize(pitch*info.height);
 						rfbNewFramebuffer(server, &frameBuffer[0], padded_width, info.height, 5, 3, BPP);
+						imageMap.Resize(info.height, info.width);
 					}
 				}
 
 				if (TakePicture((unsigned char *)server->frameBuffer)) {
-					rfbMarkRectAsModified(server, r_x0, r_y0, r_x1, r_y1);
+					if (bandwidthMode && !bandwidthController.largeFrameMode && imageMap.GetChangedRegionRatio() < 30) {
+						for (int y = 0; y < imageMap.mapHeight; y++){
+							for (int x = 0; x < imageMap.mapWidth; x++){
+								if (imageMap.imageMap[(y * imageMap.mapWidth) + x]) {
+									rfbMarkRectAsModified(server,
+										std::max(r_x0, x * imageMap.pixelsPerRegion),
+										std::max(r_y0, y * imageMap.pixelsPerRegion),
+										std::min(r_x1, x * imageMap.pixelsPerRegion + imageMap.pixelsPerRegion),
+										std::min(r_y1, y * imageMap.pixelsPerRegion + imageMap.pixelsPerRegion));
+								}
+							}
+						}
+					}
+					else
+					{
+						rfbMarkRectAsModified(server, r_x0, r_y0, r_x1, r_y1);
+					}
 				}
+
+				if (bandwidthMode) {
+					bandwidthController.ControlMode(imageMap.GetChangedRegionRatio());
+				}
+
 				errors = 0;
 			}
 			catch (Exception& e) {
@@ -232,6 +259,10 @@ int DMXVNCServer::TakePicture(unsigned char *buffer)
 	int lp_padding = padded_width >> 1;
 
 	if (bandwidthMode){
+		imageMap.Clear();
+	}
+
+	if (bandwidthMode && !bandwidthController.largeFrameMode){
 		r_y0 = info.height;
 		r_y1 = -1;
 		r_x0 = info.width / 2;
@@ -259,6 +290,9 @@ int DMXVNCServer::TakePicture(unsigned char *buffer)
 						((tbi & 0b111110000000000000000) << 10) |
 						((tbi & 0b111110000000000000000000000) >> 1) |
 						((tbi & 0b11111000000000000000000000000000) >> 11);
+
+					imageMap.imageMap[((y / imageMap.pixelsPerRegion) * ((info.width + (imageMap.pixelsPerRegion - 1)) / imageMap.pixelsPerRegion)) +
+						((x * 2) / imageMap.pixelsPerRegion)] = true;
 				}
 			}
 		}
@@ -297,6 +331,16 @@ int DMXVNCServer::TakePicture(unsigned char *buffer)
 		r_x1 = info.width - 1;
 
 		if (r_y0 < r_y1) {
+			if (bandwidthMode)
+			{
+				// Mark all lines in range as changed in imageMap
+				for (int i = ((r_y0 / imageMap.pixelsPerRegion) * ((info.width + (imageMap.pixelsPerRegion - 1)) / imageMap.pixelsPerRegion));
+						i < ((r_y1 / imageMap.pixelsPerRegion) * ((info.width + (imageMap.pixelsPerRegion - 1)) / imageMap.pixelsPerRegion)) - 1;
+						i++){
+					imageMap.imageMap[i] = true;
+				}
+			}
+
 			std::transform(image_lp + (r_y0 * lp_padding), image_lp + (r_y1 * lp_padding - 1), buffer_lp + (r_y0 * lp_padding),
 				[](unsigned long tbi){
 				return
@@ -543,3 +587,45 @@ void DMXVNCServer::ClientGone(rfbClientPtr cl)
 {
 	clients--;
 }
+
+void ImageMap::Resize(int height, int width)
+{
+	this->height = height;
+	this->width = width;
+	mapWidth = ((width + (pixelsPerRegion - 1)) / pixelsPerRegion);
+	mapHeight = ((height + (pixelsPerRegion - 1)) / pixelsPerRegion);
+	imageMap.resize(mapHeight * mapWidth);
+}
+
+void ImageMap::Clear()
+{
+	std::fill(imageMap.begin(), imageMap.end(), false);
+}
+
+int ImageMap::GetChangedRegionRatio()
+{
+	return std::count(imageMap.begin(), imageMap.end(), true) * 100 / imageMap.size();
+}
+
+void BandwidthController::ControlMode(int changedRegionRatio)
+{
+	if (largeFrameMode) {
+		if (changedRegionRatio < smallUpdateFramesSize) {
+			smallUpdateFrames++;
+			largeUpdateFrames = 0;
+			if (smallUpdateFrames > smallUpdateFramesSwitchCount) {
+				largeFrameMode = false;
+			}
+		}
+	}
+	else {
+		if (changedRegionRatio > largeUpdateFramesSize) {
+			smallUpdateFrames = 0;
+			largeUpdateFrames++;
+			if (largeUpdateFrames > largeUpdateFramesSwitchCount) {
+				largeFrameMode = true;
+			}
+		}
+	}
+}
+
