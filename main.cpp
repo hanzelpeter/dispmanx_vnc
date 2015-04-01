@@ -24,13 +24,13 @@
 /* 15 frames per second (if we can) */
 #define PICTURE_TIMEOUT (1.0/15.0)
 
-extern int terminate;
+extern bool terminate;
 
 void usage(const char *programName);
 
 void sig_handler(int signo)
 {
-	terminate = 1;
+	terminate = true;
 }
 
 int main(int argc, char *argv[])
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	try
 	{
 		uint32_t screen = 0;
-		int relativeMode = 0;
+		bool relativeMode = 0;
 		std::string password;
 		int port = 0;
 		bool safeMode = true;
@@ -62,11 +62,11 @@ int main(int argc, char *argv[])
 		while (-1 != (c = getopt_long(argc, argv, "abfP:p:rs:u", long_options, nullptr))) {
 			switch (c) {
 			case 'a':
-				relativeMode = 0;
+				relativeMode = false;
 				break;
 
 			case 'r':
-				relativeMode = 1;
+				relativeMode = true;
 				break;
 
 			case 'u':

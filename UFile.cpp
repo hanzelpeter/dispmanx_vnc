@@ -14,7 +14,7 @@ UFile::~UFile()
 	Close();
 };
 
-void UFile::Open(int relativeMode, int width, int height)
+void UFile::Open(bool relativeMode, int width, int height)
 {
 	struct uinput_user_dev uinp;
 	int retcode, i;

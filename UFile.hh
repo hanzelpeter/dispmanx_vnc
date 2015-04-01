@@ -8,7 +8,7 @@ class UFile
 {
 public:
 	~UFile();
-	void Open(int relativeMode, int width, int height);
+	void Open(bool relativeMode, int width, int height);
 	void Close();
 	void WriteEvent(__u16 type, __u16 code, __s32 value);
 

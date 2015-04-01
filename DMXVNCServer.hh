@@ -2,6 +2,7 @@
 #define DMXVNCSERVER_HH
 
 #include <vector>
+#include <set>
 #include <string>
 #include <iostream>
 #include <algorithm>
@@ -53,7 +54,7 @@ public:
 	void Open();
 	void Close();
 	bool IsOpen();
-	void Run(int argc, char *argv[], int port, const std::string& password, int screen, int relativeMode, bool safeMode, bool bandwidthMode);
+	void Run(int argc, char *argv[], int port, const std::string& password, int screen, bool relativeMode, bool safeMode, bool bandwidthMode);
 	int TimeToTakePicture();
 	double getTime();
 	int TakePicture(unsigned char *buffer);
@@ -91,7 +92,7 @@ private:
 	void *back_image = nullptr;
 
 	DISPMANX_MODEINFO_T info = { 0 };
-	int relativeMode = 0;
+	bool relativeMode = false;
 	bool safeMode = false;
 	bool bandwidthMode = false;
 	int screen = 0;
@@ -102,6 +103,8 @@ private:
 	int r_y0 = 0;
 	int r_x1 = 0;
 	int r_y1 = 0;
+
+	std::set<rfbKeySym> pressedKeys;
 
 	int mouse_last = 0;
 	int last_x = 0;

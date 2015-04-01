@@ -17,7 +17,7 @@
 # define KEY_STAR KEY_UNKNOWN
 #endif
 
-int terminate = 0;
+bool terminate = false;
 
 DMXVNCServer::DMXVNCServer(int BPP, float PICTURE_TIMEOUT) {
 	this->BPP = BPP;
@@ -79,7 +79,7 @@ bool DMXVNCServer::IsOpen()
 	return m_display.IsOpen();
 }
 
-void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& password, int screen, int relativeMode, bool safeMode, bool bandwidthMode)
+void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& password, int screen, bool relativeMode, bool safeMode, bool bandwidthMode)
 {
 	long usec;
 
@@ -557,10 +557,20 @@ void DMXVNCServer::dokey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 void DMXVNCServer::DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 {
 	if (down) {
+		if (pressedKeys.find(key) != pressedKeys.end()) {
+			m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 0);
+			m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
+		}
+		else {
+			pressedKeys.insert(key);
+		}
 		m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 1);
 		m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
 	}
 	else {
+		if (pressedKeys.find(key) != pressedKeys.end()) {
+			pressedKeys.erase(key);
+		}
 		m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 0);
 		m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
 	}
