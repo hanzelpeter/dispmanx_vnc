@@ -38,6 +38,8 @@ void UFile::Open(bool relativeMode, int width, int height)
 	}
 
 	ioctl(ufile, UI_SET_EVBIT, EV_KEY);
+	ioctl(ufile, UI_SET_EVBIT, EV_REP);
+	ioctl(ufile, UI_SET_EVBIT, EV_SYN);
 
 	for (i = 0; i<KEY_MAX; i++) { //I believe this is to tell UINPUT what keys we can make?
 		ioctl(ufile, UI_SET_KEYBIT, i);

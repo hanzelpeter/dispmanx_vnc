@@ -19,6 +19,13 @@
 
 bool terminate = false;
 
+double getTime() {
+	static struct timeval now = { 0, 0 };
+	gettimeofday(&now, NULL);
+	return now.tv_sec + (now.tv_usec / 1000000.0);
+};
+
+
 DMXVNCServer::DMXVNCServer(int BPP, float PICTURE_TIMEOUT) {
 	this->BPP = BPP;
 	this->PICTURE_TIMEOUT = PICTURE_TIMEOUT;
@@ -145,7 +152,8 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 	/* Loop, processing clients and taking pictures */
 	int errors = 0;
 	while (!terminate && rfbIsActive(server)) {
-		if (clients && TimeToTakePicture()) {
+		double timeToTakePicture = 0.0;
+		if (clients && 0.0 == (timeToTakePicture = TimeToTakePicture())) {
 			try {
 				if (!IsOpen())
 				{
@@ -192,13 +200,14 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 			}
 		}
 
-		if (!clients)
-		{
+		if (!clients) {
+			usec = 100 * 1000;
 			if (IsOpen())
 				Close();
 		}
-
-		usec = server->deferUpdateTime * 1000;
+		else {
+			usec = (long)std::max(timeToTakePicture * 1000000.0, server->deferUpdateTime * 1000.0);
+		}
 		rfbProcessEvents(server, usec);
 	}
 }
@@ -206,7 +215,7 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 /*
 * throttle camera updates
 */
-int DMXVNCServer::TimeToTakePicture() {
+double DMXVNCServer::TimeToTakePicture() {
 	static struct timeval now = { 0, 0 }, then = { 0, 0 };
 	double elapsed, dnow, dthen;
 
@@ -218,13 +227,7 @@ int DMXVNCServer::TimeToTakePicture() {
 
 	if (elapsed > PICTURE_TIMEOUT)
 		memcpy((char *)&then, (char *)&now, sizeof(struct timeval));
-	return elapsed > PICTURE_TIMEOUT;
-};
-
-double getTime() {
-	static struct timeval now = { 0, 0 };
-	gettimeofday(&now, NULL);
-	return now.tv_sec + (now.tv_usec / 1000000.0);
+	return std::max(0.0, PICTURE_TIMEOUT - elapsed);
 };
 
 /*
@@ -557,20 +560,10 @@ void DMXVNCServer::dokey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 void DMXVNCServer::DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 {
 	if (down) {
-		if (pressedKeys.find(key) != pressedKeys.end()) {
-			m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 0);
-			m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
-		}
-		else {
-			pressedKeys.insert(key);
-		}
 		m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 1);
 		m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
 	}
 	else {
-		if (pressedKeys.find(key) != pressedKeys.end()) {
-			pressedKeys.erase(key);
-		}
 		m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 0);
 		m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
 	}

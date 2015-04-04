@@ -55,8 +55,7 @@ public:
 	void Close();
 	bool IsOpen();
 	void Run(int argc, char *argv[], int port, const std::string& password, int screen, bool relativeMode, bool safeMode, bool bandwidthMode);
-	int TimeToTakePicture();
-	double getTime();
+	double TimeToTakePicture();
 	int TakePicture(unsigned char *buffer);
 	int keysym2scancode(rfbKeySym key);
 	static void doptr(int buttonMask, int x, int y, rfbClientPtr cl);
@@ -103,8 +102,6 @@ private:
 	int r_y0 = 0;
 	int r_x1 = 0;
 	int r_y1 = 0;
-
-	std::set<rfbKeySym> pressedKeys;
 
 	int mouse_last = 0;
 	int last_x = 0;
