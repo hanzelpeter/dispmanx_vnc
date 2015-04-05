@@ -101,6 +101,9 @@ int main(int argc, char *argv[])
 		if (signal(SIGINT, sig_handler) == SIG_ERR) {
 			throw Exception( "error setting sighandler");
 		}
+		if (signal(SIGTERM, sig_handler) == SIG_ERR) {
+			throw Exception("error setting sighandler");
+		}
 
 		DMXVNCServer vncServer(BPP,PICTURE_TIMEOUT);
 		vncServer.Run( argc, argv, port, password, screen, relativeMode, safeMode, bandwidthMode);
