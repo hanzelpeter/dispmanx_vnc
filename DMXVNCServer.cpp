@@ -20,15 +20,15 @@
 bool terminate = false;
 
 double getTime() {
-	static struct timeval now = { 0, 0 };
+	struct timeval now;
 	gettimeofday(&now, NULL);
 	return now.tv_sec + (now.tv_usec / 1000000.0);
 };
 
 
-DMXVNCServer::DMXVNCServer(int BPP, float PICTURE_TIMEOUT) {
+DMXVNCServer::DMXVNCServer(int BPP, int frameRate) {
 	this->BPP = BPP;
-	this->PICTURE_TIMEOUT = PICTURE_TIMEOUT;
+	this->pictureTimeout = 1.0 / (float)frameRate;
 }
 
 DMXVNCServer::~DMXVNCServer()
@@ -86,7 +86,9 @@ bool DMXVNCServer::IsOpen()
 	return m_display.IsOpen();
 }
 
-void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& password, int screen, bool relativeMode, bool safeMode, bool bandwidthMode)
+void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& password,
+						int screen, bool relativeMode, bool safeMode,
+						bool bandwidthMode, bool multiThreaded)
 {
 	long usec;
 
@@ -94,6 +96,7 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 	this->safeMode = safeMode;
 	this->bandwidthMode = bandwidthMode;
 	this->screen = screen;
+	this->multiThreaded = multiThreaded;
 
 	Open();
 
@@ -143,6 +146,8 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 
 	/* Initialize the server */
 	rfbInitServer(server);
+	if (multiThreaded)
+		rfbRunEventLoop(server,-1,TRUE);
 
 	m_ufile.Open(this->relativeMode, info.width, info.height);
 
@@ -208,7 +213,11 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 		else {
 			usec = (long)std::max(timeToTakePicture * 1000000.0, server->deferUpdateTime * 1000.0);
 		}
-		rfbProcessEvents(server, usec);
+
+		if (multiThreaded)
+			usleep(usec);
+		else
+			rfbProcessEvents(server, usec);
 	}
 }
 
@@ -216,18 +225,12 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 * throttle camera updates
 */
 double DMXVNCServer::TimeToTakePicture() {
-	static struct timeval now = { 0, 0 }, then = { 0, 0 };
-	double elapsed, dnow, dthen;
+	double now = getTime();
+	double elapsed = now - timeLastPicture;
 
-	gettimeofday(&now, NULL);
-
-	dnow = now.tv_sec + (now.tv_usec / 1000000.0);
-	dthen = then.tv_sec + (then.tv_usec / 1000000.0);
-	elapsed = dnow - dthen;
-
-	if (elapsed > PICTURE_TIMEOUT)
-		memcpy((char *)&then, (char *)&now, sizeof(struct timeval));
-	return std::max(0.0, PICTURE_TIMEOUT - elapsed);
+	if (elapsed > pictureTimeout)
+		timeLastPicture = now;
+	return std::max(0.0, pictureTimeout - elapsed);
 };
 
 /*
@@ -374,15 +377,13 @@ int DMXVNCServer::TakePicture(unsigned char *buffer)
 	}
 	last_line = line;
 
-	static char printbufferold[80] = "";
 	char printbuffer[80];
-
 	sprintf(printbuffer, "Picture (%03d fps) x0=%d, y0=%d, x1=%d, y1=%d              \r",
 		fps, r_x0, r_y0, r_x1, r_y1);
 
-	if (strcmp(printbuffer, printbufferold)) {
+	if (lastPrintedMessage != printbuffer) {
 		fprintf(stderr, printbuffer);
-		strcpy(printbufferold, printbuffer);
+		lastPrintedMessage = printbuffer;
 	}
 
 	/* success!   We have a new picture! */

@@ -21,9 +21,6 @@
 #include "DMXVNCServer.hh"
 #define BPP      2
 
-/* 15 frames per second (if we can) */
-#define PICTURE_TIMEOUT (1.0/15.0)
-
 extern bool terminate;
 
 void usage(const char *programName);
@@ -45,21 +42,25 @@ int main(int argc, char *argv[])
 		int port = 0;
 		bool safeMode = true;
 		bool bandwidthMode = true;
+		bool multiThreaded = false;
+		int frameRate = 15;
 
 		static struct option long_options[] = {
 			{ "relative", no_argument, nullptr, 'r' },
 			{ "absolute", no_argument, nullptr, 'a' },
 			{ "unsafe", no_argument, nullptr, 'u' },
 			{ "fullscreen", no_argument, nullptr, 'f' },
+			{ "multi-threaded", no_argument, nullptr, 'm' },
 			{ "password", required_argument, nullptr, 'P' },
 			{ "port", required_argument, nullptr, 'p' },
 			{ "screen", required_argument, nullptr, 's' },
+			{ "frame-rate", required_argument, nullptr, 't' },
 			{ "help", no_argument, nullptr, CHAR_MIN - 2 },
 			{ nullptr, 0, nullptr, 0}
 		};
 
 		int c;
-		while (-1 != (c = getopt_long(argc, argv, "abfP:p:rs:u", long_options, nullptr))) {
+		while (-1 != (c = getopt_long(argc, argv, "abfmP:p:rs:t:u", long_options, nullptr))) {
 			switch (c) {
 			case 'a':
 				relativeMode = false;
@@ -77,6 +78,10 @@ int main(int argc, char *argv[])
 				bandwidthMode = false;
 				break;
 
+			case 'm':
+				multiThreaded = true;
+				break;
+
 			case 'P':
 				password = optarg;
 				break;
@@ -89,13 +94,21 @@ int main(int argc, char *argv[])
 				screen = atoi(optarg);
 				break;
 
+			case 't':
+				frameRate = atoi(optarg);
+				break;
+
 			case CHAR_MIN - 2:
 				throw HelpException();
-				break;
 
 			default:
 				throw ParamException();
 			}
+		}
+
+		if (optind < argc) {
+			std::cerr << "Unknown parameter: " << argv[optind] << '\n';
+			throw ParamException();
 		}
 
 		if (signal(SIGINT, sig_handler) == SIG_ERR) {
@@ -105,8 +118,8 @@ int main(int argc, char *argv[])
 			throw Exception("error setting sighandler");
 		}
 
-		DMXVNCServer vncServer(BPP,PICTURE_TIMEOUT);
-		vncServer.Run( argc, argv, port, password, screen, relativeMode, safeMode, bandwidthMode);
+		DMXVNCServer vncServer(BPP, frameRate);
+		vncServer.Run( argc, argv, port, password, screen, relativeMode, safeMode, bandwidthMode, multiThreaded);
 	}
 	catch (HelpException) {
 		usage(argv[0]);
@@ -130,10 +143,12 @@ void usage(const char *programName)
 		"\n"
 		"  -a, --absolute               absolute mouse movements\n"
 		"  -f, --fullscreen             always runs fullscreen mode\n"
+		"  -m, --multi-threaded         runs vnc in a separate thread\n"
 		"  -p, --port=PORT              makes vnc available on the speficied port\n"
 		"  -P, --password=PASSWORD      protects the session with PASSWORD\n"
 		"  -r, --relative               relative mouse movements\n"
 		"  -s, --screen=SCREEN          opens the specified screen number\n"
+		"  -t, --frame-rate=RATE        sets the target frame rate, default is 15\n"
 		"  -u, --unsafe                 disables more robust handling of resolution\n"
 		"                               change at a small performance gain\n"
 		"      --help                   displays this help and exit\n";

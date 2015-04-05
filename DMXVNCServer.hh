@@ -49,12 +49,14 @@ public:
 class DMXVNCServer
 {
 public:
-	DMXVNCServer(int BPP, float PICTURE_TIMEOUT);
+	DMXVNCServer(int BPP, int frameRate);
 	~DMXVNCServer();
 	void Open();
 	void Close();
 	bool IsOpen();
-	void Run(int argc, char *argv[], int port, const std::string& password, int screen, bool relativeMode, bool safeMode, bool bandwidthMode);
+	void Run(int argc, char *argv[], int port, const std::string& password,
+				int screen, bool relativeMode, bool safeMode,
+				bool bandwidthMode, bool multiThreaded);
 	double TimeToTakePicture();
 	int TakePicture(unsigned char *buffer);
 	int keysym2scancode(rfbKeySym key);
@@ -74,7 +76,7 @@ private:
 	UFile m_ufile;
 	rfbScreenInfoPtr server = nullptr;
 	int BPP = 0;
-	float PICTURE_TIMEOUT = 0.0;
+	float pictureTimeout = 0.0;
 
 	std::string desktopName;
 	const char *passwords[2] = { nullptr, nullptr };
@@ -94,7 +96,11 @@ private:
 	bool relativeMode = false;
 	bool safeMode = false;
 	bool bandwidthMode = false;
+	bool multiThreaded = false;
 	int screen = 0;
+
+	double timeLastPicture = 0.0;
+	std::string lastPrintedMessage;
 
 	int padded_width = 0;
 	int pitch = 0;
