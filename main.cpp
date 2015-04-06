@@ -32,6 +32,7 @@ struct ConfigData
 	bool relative = false;
 	std::string password;
 	int port = 0;
+	bool downscale = false;
 	bool unsafe = false;
 	bool fullscreen = false;
 	bool multiThreaded = false;
@@ -69,6 +70,7 @@ int main(int argc, char *argv[])
 		std::cerr <<
 			"Running vnc server with the following settings\n"
 			"  frame-rate = " << configData.frameRate << "\n"
+			"  downscale = " << (configData.downscale ? "true" : "false") << "\n"
 			"  fullscreen = " << (configData.fullscreen ? "true" : "false") << "\n"
 			"  multi-threaded = " << (configData.multiThreaded ? "true" : "false") << "\n"
 			"  password = " << (configData.password.length() ? "***" : "") << "\n"
@@ -80,7 +82,7 @@ int main(int argc, char *argv[])
 		DMXVNCServer vncServer(BPP, configData.frameRate);
 		vncServer.Run(argc, argv, configData.port, configData.password, configData.screen,
 									configData.relative, !configData.unsafe, !configData.fullscreen,
-									configData.multiThreaded);
+									configData.multiThreaded, configData.downscale);
 	}
 	catch (HelpException) {
 		usage(argv[0]);
@@ -113,6 +115,7 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 		{ "relative", no_argument, nullptr, 'r' },
 		{ "absolute", no_argument, nullptr, 'a' },
 		{ "config-file", required_argument, nullptr, 'c' },
+		{ "downscale", no_argument, nullptr, 'd' },
 		{ "unsafe", no_argument, nullptr, 'u' },
 		{ "fullscreen", no_argument, nullptr, 'f' },
 		{ "multi-threaded", no_argument, nullptr, 'm' },
@@ -126,7 +129,7 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 
 	int c;
 	optind = 1;
-	while (-1 != (c = getopt_long(argc, argv, "abc:fmP:p:rs:t:u", long_options, nullptr))) {
+	while (-1 != (c = getopt_long(argc, argv, "abc:dfmP:p:rs:t:u", long_options, nullptr))) {
 		switch (c) {
 		case 'a':
 			configData.relative = false;
@@ -138,6 +141,10 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 
 		case 'c':
 			configData.configFile = optarg;
+			break;
+
+		case 'd':
+			configData.downscale = true;
 			break;
 
 		case 'u':
@@ -214,6 +221,7 @@ bool ReadConfigFile(const char *programName, const std::string& configFile, Conf
 
 		config.lookupValue("relative", configData.relative);
 		config.lookupValue("unsafe", configData.unsafe);
+		config.lookupValue("downscale", configData.downscale);
 		config.lookupValue("fullscreen", configData.fullscreen);
 		config.lookupValue("multi-threaded", configData.multiThreaded);
 		config.lookupValue("password", configData.password);
@@ -250,6 +258,7 @@ void usage(const char *programName)
 		"\n"
 		"  -a, --absolute               absolute mouse movements\n"
 		"  -c, --config-file=FILE       use the specified configuration file\n"
+		"  -d, --downscale              downscales the screen to a quarter in vnc\n"
 		"  -f, --fullscreen             always runs fullscreen mode\n"
 		"  -m, --multi-threaded         runs vnc in a separate thread\n"
 		"  -p, --port=PORT              makes vnc available on the speficied port\n"

@@ -49,8 +49,17 @@ void DMXVNCServer::Open()
 	printf("info: %d, %d, %d, %d\n", info.width, info.height, info.transform, info.input_format);
 
 	/* DispmanX expects buffer rows to be aligned to a 32 bit boundarys */
-	pitch = ALIGN_UP(2 * info.width, 32);
+	pitch = ALIGN_UP(BPP * info.width, 32);
 	padded_width = pitch / BPP;
+
+	if (downscale) {
+		frameBufferPitch = ALIGN_UP(BPP * info.width / 2, 32);
+		frameBufferPaddedWidth = frameBufferPitch / BPP;
+	}
+	else {
+		frameBufferPitch = pitch;
+		frameBufferPaddedWidth = padded_width;
+	}
 
 	printf("Display is %d x %d\n", info.width, info.height);
 
@@ -88,7 +97,7 @@ bool DMXVNCServer::IsOpen()
 
 void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& password,
 						int screen, bool relativeMode, bool safeMode,
-						bool bandwidthMode, bool multiThreaded)
+						bool bandwidthMode, bool multiThreaded, bool downscale)
 {
 	long usec;
 
@@ -97,10 +106,16 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 	this->bandwidthMode = bandwidthMode;
 	this->screen = screen;
 	this->multiThreaded = multiThreaded;
+	this->downscale = downscale;
 
 	Open();
 
-	server = rfbGetScreen(&argc, argv, padded_width, info.height, 5, 3, BPP);
+	if (downscale) {
+		server = rfbGetScreen(&argc, argv, frameBufferPaddedWidth, info.height / 2, 5, 3, BPP);
+	}
+	else {
+		server = rfbGetScreen(&argc, argv, frameBufferPaddedWidth, info.height, 5, 3, BPP);
+	}
 	if (!server)
 		throw Exception("rfbGetScreen failed");
 
@@ -125,7 +140,10 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 	else
 		server->desktopName = "VNC server via dispmanx";
 
-	frameBuffer.resize(pitch*info.height);
+	if (downscale)
+		frameBuffer.resize(frameBufferPitch*info.height / 2);
+	else
+		frameBuffer.resize(frameBufferPitch*info.height);
 	server->frameBuffer = (char*)&frameBuffer[0];
 	server->alwaysShared = (1 == 1);
 	server->kbdAddEvent = dokey;
@@ -164,8 +182,14 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 				{
 					Open();
 					if (info.width != server->width || info.height != server->height) {
-						frameBuffer.resize(pitch*info.height);
-						rfbNewFramebuffer(server, &frameBuffer[0], padded_width, info.height, 5, 3, BPP);
+						if (downscale) {
+							frameBuffer.resize(frameBufferPitch*info.height / 2);
+							rfbNewFramebuffer(server, &frameBuffer[0], frameBufferPaddedWidth, info.height / 2, 5, 3, BPP);
+						}
+						else {
+							frameBuffer.resize(frameBufferPitch*info.height);
+							rfbNewFramebuffer(server, &frameBuffer[0], frameBufferPaddedWidth, info.height, 5, 3, BPP);
+						}
 						imageMap.Resize(info.height, info.width);
 					}
 				}
@@ -177,18 +201,32 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 						for (int y = 0; y < imageMap.mapHeight; y++){
 							for (int x = 0; x < imageMap.mapWidth; x++){
 								if (imageMap.imageMap[(y * imageMap.mapWidth) + x]) {
-									rfbMarkRectAsModified(server,
-										std::max(r_x0, x * imageMap.pixelsPerRegion),
-										std::max(r_y0, y * imageMap.pixelsPerRegion),
-										std::min(r_x1, x * imageMap.pixelsPerRegion + imageMap.pixelsPerRegion),
-										std::min(r_y1, y * imageMap.pixelsPerRegion + imageMap.pixelsPerRegion));
+									if (downscale){
+										rfbMarkRectAsModified(server,
+											std::max(r_x0 / 2, x * imageMap.pixelsPerRegion / 2),
+											std::max(r_y0 / 2, y * imageMap.pixelsPerRegion / 2),
+											std::min(r_x1 / 2, (x * imageMap.pixelsPerRegion) / 2 + imageMap.pixelsPerRegion / 2),
+											std::min(r_y1 / 2, (y * imageMap.pixelsPerRegion) / 2 + imageMap.pixelsPerRegion / 2));
+									}
+									else{
+										rfbMarkRectAsModified(server,
+											std::max(r_x0, x * imageMap.pixelsPerRegion),
+											std::max(r_y0, y * imageMap.pixelsPerRegion),
+											std::min(r_x1, (x * imageMap.pixelsPerRegion) + imageMap.pixelsPerRegion),
+											std::min(r_y1, (y * imageMap.pixelsPerRegion) + imageMap.pixelsPerRegion));
+									}
 								}
 							}
 						}
 					}
 					else
 					{
-						rfbMarkRectAsModified(server, r_x0, r_y0, r_x1, r_y1);
+						if (downscale) {
+							rfbMarkRectAsModified(server, r_x0 / 2, r_y0 / 2, r_x1 / 2, r_y1 / 2);
+						}
+						else {
+							rfbMarkRectAsModified(server, r_x0, r_y0, r_x1, r_y1);
+						}
 					}
 				}
 				else {
@@ -276,7 +314,68 @@ int DMXVNCServer::TakePicture(unsigned char *buffer)
 		imageMap.Clear();
 	}
 
-	if (bandwidthMode && !bandwidthController.largeFrameMode){
+	if (downscale) {
+		uint16_t *buffer_16p = (uint16_t *)buffer;
+
+		r_y0 = info.height;
+		r_y1 = -1;
+		r_x0 = info.width / 2;
+		r_x1 = -1;
+
+		for (int y = 0; y < info.height; y += 2) {
+			for (int x = 0; x < (info.width / 2); x++) {
+				if (back_image_lp[y * lp_padding + x] != image_lp[y * lp_padding + x] ||
+					back_image_lp[(y + 1) * lp_padding + x] != image_lp[(y + 1) * lp_padding + x]) {
+
+					if (r_y0 == info.height) {
+						r_y0 = r_y1 = y;
+						r_x0 = r_x1 = x;
+					}
+					else {
+						if (y > r_y1) r_y1 = y + 1;
+						if (x < r_x0) r_x0 = x;
+						if (x > r_x1) r_x1 = x;
+					}
+
+					{
+						unsigned long tbi1 = image_lp[y * lp_padding + x];
+						unsigned long tbi2 = image_lp[(y + 1) * lp_padding + x];
+
+						uint16_t r1, r2, r3;
+						r1 = ((tbi1 & 0b0000000000011111) +
+							((tbi1 >> 16) & 0b0000000000011111) +
+							(tbi2 & 0b0000000000011111) +
+							((tbi2 >> 16) & 0b0000000000011111)) / 4;
+
+						r2 = (((tbi1 & 0b0000011111000000) >> 6) +
+							(((tbi1 >> 16) & 0b0000011111000000) >> 6) +
+							((tbi2 & 0b0000011111000000) >> 6) +
+							(((tbi2 >> 16) & 0b0000011111000000) >> 6)) / 4;
+
+						r3 = (((tbi1 & 0b1111100000000000) >> 11) +
+							(((tbi1 >> 16) & 0b1111100000000000) >> 11) +
+							((tbi2 & 0b1111100000000000) >> 11) +
+							(((tbi2 >> 16) & 0b1111100000000000) >> 11)) / 4;
+
+						int offset = y / 2 * frameBufferPaddedWidth + x;
+						buffer_16p[offset] = (r1 << 10 | r2 << 5 | r3);
+					}
+
+					imageMap.imageMap[((y / imageMap.pixelsPerRegion) * ((info.width + (imageMap.pixelsPerRegion - 1)) / imageMap.pixelsPerRegion)) +
+						((x * 2) / imageMap.pixelsPerRegion)] = true;
+				}
+			}
+		}
+
+		if (r_y0 == info.height){
+			r_x0 = r_x1 = r_y0 = r_y1 = 0;
+		}
+		else{
+			r_x1 = (r_x1 + 1) * 2;
+			r_y1++;
+		}
+	}
+	else if( bandwidthMode && !bandwidthController.largeFrameMode) {
 		r_y0 = info.height;
 		r_y1 = -1;
 		r_x0 = info.width / 2;
@@ -318,7 +417,6 @@ int DMXVNCServer::TakePicture(unsigned char *buffer)
 			r_x1 = (r_x1 + 1) * 2;
 			r_y1++;
 		}
-
 	}
 	else {
 
@@ -513,6 +611,12 @@ void DMXVNCServer::doptr(int buttonMask, int x, int y, rfbClientPtr cl)
 
 void DMXVNCServer::DoPtr(int buttonMask, int x, int y, rfbClientPtr cl)
 {
+	if (downscale)
+	{
+		x *= 2;
+		y *= 2;
+	}
+
 	//printf("mouse: 0x%x at %d,%d\n", buttonMask, x,y);
 
 	if (relativeMode) {

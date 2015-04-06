@@ -57,7 +57,7 @@ public:
 	bool IsOpen();
 	void Run(int argc, char *argv[], int port, const std::string& password,
 				int screen, bool relativeMode, bool safeMode,
-				bool bandwidthMode, bool multiThreaded);
+				bool bandwidthMode, bool multiThreaded, bool downscale);
 	double TimeToTakePicture();
 	int TakePicture(unsigned char *buffer);
 	int keysym2scancode(rfbKeySym key);
@@ -88,8 +88,11 @@ private:
 
 	BandwidthController bandwidthController;
 
-	ImageMap imageMap;
 	std::vector<char> frameBuffer;
+	int frameBufferPitch = 0;
+	int frameBufferPaddedWidth = 0;
+
+	ImageMap imageMap;
 	std::vector<char> imageBuffer1;
 	std::vector<char> imageBuffer2;
 	void *image = nullptr;
@@ -100,6 +103,7 @@ private:
 	bool safeMode = false;
 	bool bandwidthMode = false;
 	bool multiThreaded = false;
+	bool downscale = false;
 	int screen = 0;
 
 	double timeLastFrameStart = 0.0;
