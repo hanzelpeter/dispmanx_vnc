@@ -125,6 +125,7 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 	};
 
 	int c;
+	optind = 1;
 	while (-1 != (c = getopt_long(argc, argv, "abc:fmP:p:rs:t:u", long_options, nullptr))) {
 		switch (c) {
 		case 'a':
