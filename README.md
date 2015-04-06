@@ -5,11 +5,11 @@ VNC Server for Raspberry PI using dispmanx
 
 Compile with "make"
 
-you need to have installed libvncserver-dev and gcc/g++-4.7. 
+you need to have installed libvncserver-dev, libconfig++-dev and gcc/g++-4.7. 
 
 On raspbian you prepare using the following steps.
 
-	apt-get install gcc-4.7 g++-4.7 libvncserver-dev
+	apt-get install gcc-4.7 g++-4.7 libvncserver-dev libconfig++-dev
 
 Followed by 
 

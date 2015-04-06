@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <iostream>
+#include <sstream>
 
 #include <errno.h>
 #include <sys/time.h>
@@ -13,6 +14,8 @@
 #include <stdint.h>
 #include <assert.h>
 #include <getopt.h>
+
+#include <libconfig.h++>
 
 #include "Exception.hh"
 #include "UFile.hh"
@@ -23,6 +26,23 @@
 
 extern bool terminate;
 
+struct ConfigData
+{
+	uint32_t screen = 0;
+	bool relative = false;
+	std::string password;
+	int port = 0;
+	bool unsafe = false;
+	bool fullscreen = false;
+	bool multiThreaded = false;
+	int frameRate = 15;
+	std::string configFile;
+};
+
+void GetConfigData(int argc, char *argv[], ConfigData& configData);
+void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData);
+bool ReadConfigFile(const char *programName, const std::string& configFile, ConfigData& configData);
+bool TryReadConfigFile(libconfig::Config& config, const std::string& file);
 void usage(const char *programName);
 
 void sig_handler(int signo)
@@ -36,81 +56,6 @@ int main(int argc, char *argv[])
 
 	try
 	{
-		uint32_t screen = 0;
-		bool relativeMode = 0;
-		std::string password;
-		int port = 0;
-		bool safeMode = true;
-		bool bandwidthMode = true;
-		bool multiThreaded = false;
-		int frameRate = 15;
-
-		static struct option long_options[] = {
-			{ "relative", no_argument, nullptr, 'r' },
-			{ "absolute", no_argument, nullptr, 'a' },
-			{ "unsafe", no_argument, nullptr, 'u' },
-			{ "fullscreen", no_argument, nullptr, 'f' },
-			{ "multi-threaded", no_argument, nullptr, 'm' },
-			{ "password", required_argument, nullptr, 'P' },
-			{ "port", required_argument, nullptr, 'p' },
-			{ "screen", required_argument, nullptr, 's' },
-			{ "frame-rate", required_argument, nullptr, 't' },
-			{ "help", no_argument, nullptr, CHAR_MIN - 2 },
-			{ nullptr, 0, nullptr, 0}
-		};
-
-		int c;
-		while (-1 != (c = getopt_long(argc, argv, "abfmP:p:rs:t:u", long_options, nullptr))) {
-			switch (c) {
-			case 'a':
-				relativeMode = false;
-				break;
-
-			case 'r':
-				relativeMode = true;
-				break;
-
-			case 'u':
-				safeMode = false;
-				break;
-
-			case 'f':
-				bandwidthMode = false;
-				break;
-
-			case 'm':
-				multiThreaded = true;
-				break;
-
-			case 'P':
-				password = optarg;
-				break;
-
-			case 'p':
-				port = atoi(optarg);
-				break;
-
-			case 's':
-				screen = atoi(optarg);
-				break;
-
-			case 't':
-				frameRate = atoi(optarg);
-				break;
-
-			case CHAR_MIN - 2:
-				throw HelpException();
-
-			default:
-				throw ParamException();
-			}
-		}
-
-		if (optind < argc) {
-			std::cerr << "Unknown parameter: " << argv[optind] << '\n';
-			throw ParamException();
-		}
-
 		if (signal(SIGINT, sig_handler) == SIG_ERR) {
 			throw Exception( "error setting sighandler");
 		}
@@ -118,8 +63,24 @@ int main(int argc, char *argv[])
 			throw Exception("error setting sighandler");
 		}
 
-		DMXVNCServer vncServer(BPP, frameRate);
-		vncServer.Run( argc, argv, port, password, screen, relativeMode, safeMode, bandwidthMode, multiThreaded);
+		ConfigData configData;
+		GetConfigData(argc, argv, configData);
+
+		std::cerr <<
+			"Running vnc server with the following settings\n"
+			"  frame-rate = " << configData.frameRate << "\n"
+			"  fullscreen = " << (configData.fullscreen ? "true" : "false") << "\n"
+			"  multi-threaded = " << (configData.multiThreaded ? "true" : "false") << "\n"
+			"  password = " << (configData.password.length() ? "***" : "") << "\n"
+			"  port = " << configData.port << "\n"
+			"  relative = " << (configData.relative ? "true" : "false") << "\n"
+			"  screen = " << configData.screen << "\n"
+			"  unsafe = " << (configData.unsafe ? "true" : "false") << "\n";
+
+		DMXVNCServer vncServer(BPP, configData.frameRate);
+		vncServer.Run(argc, argv, configData.port, configData.password, configData.screen,
+									configData.relative, !configData.unsafe, !configData.fullscreen,
+									configData.multiThreaded);
 	}
 	catch (HelpException) {
 		usage(argv[0]);
@@ -129,11 +90,156 @@ int main(int argc, char *argv[])
 		ret = EXIT_FAILURE;
 	}
 	catch (Exception& e) {
-		std::cerr << "Exception caught: " << e.what() << "\n";
+		std::cerr << "Exception: " << e.what() << "\n";
 		ret = EXIT_FAILURE;
 	}
 
 	return ret;
+}
+
+void GetConfigData(int argc, char *argv[], ConfigData& configData)
+{
+	ConfigData configDataTemp;
+	GetCommandLineConfigData(argc, argv, configDataTemp);
+	if (ReadConfigFile(argv[0], configDataTemp.configFile, configData))
+		GetCommandLineConfigData(argc, argv, configData);
+	else
+		configData = configDataTemp;
+}
+
+void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
+{
+	static struct option long_options[] = {
+		{ "relative", no_argument, nullptr, 'r' },
+		{ "absolute", no_argument, nullptr, 'a' },
+		{ "config-file", required_argument, nullptr, 'c' },
+		{ "unsafe", no_argument, nullptr, 'u' },
+		{ "fullscreen", no_argument, nullptr, 'f' },
+		{ "multi-threaded", no_argument, nullptr, 'm' },
+		{ "password", required_argument, nullptr, 'P' },
+		{ "port", required_argument, nullptr, 'p' },
+		{ "screen", required_argument, nullptr, 's' },
+		{ "frame-rate", required_argument, nullptr, 't' },
+		{ "help", no_argument, nullptr, CHAR_MIN - 2 },
+		{ nullptr, 0, nullptr, 0 }
+	};
+
+	int c;
+	while (-1 != (c = getopt_long(argc, argv, "abc:fmP:p:rs:t:u", long_options, nullptr))) {
+		switch (c) {
+		case 'a':
+			configData.relative = false;
+			break;
+
+		case 'r':
+			configData.relative = true;
+			break;
+
+		case 'c':
+			configData.configFile = optarg;
+			break;
+
+		case 'u':
+			configData.unsafe = true;
+			break;
+
+		case 'f':
+			configData.fullscreen = true;
+			break;
+
+		case 'm':
+			configData.multiThreaded = true;
+			break;
+
+		case 'P':
+			configData.password = optarg;
+			break;
+
+		case 'p':
+			configData.port = atoi(optarg);
+			break;
+
+		case 's':
+			configData.screen = atoi(optarg);
+			break;
+
+		case 't':
+			configData.frameRate = atoi(optarg);
+			break;
+
+		case CHAR_MIN - 2:
+			throw HelpException();
+
+		default:
+			throw ParamException();
+		}
+	}
+
+	if (optind < argc) {
+		std::cerr << "Unknown parameter: " << argv[optind] << '\n';
+		throw ParamException();
+	}
+}
+
+bool ReadConfigFile(const char *programName, const std::string& configFile, ConfigData& configData)
+{
+	std::string configFileTemp;
+	libconfig::Config config;
+	bool readConfig = false;
+
+	if (configFile.length()) {
+		configFileTemp = configFile;
+		readConfig = TryReadConfigFile(config, configFileTemp);
+		if (!readConfig)
+			throw Exception("Unable to read the specified configuration file");
+	}
+	else {
+		configFileTemp = programName;
+		configFileTemp += ".conf";
+		readConfig = TryReadConfigFile(config, configFileTemp);
+		if (!readConfig) {
+			const char *baseName = basename(programName);
+			configFileTemp = "/etc/";
+			configFileTemp += baseName;
+			configFileTemp += ".conf";
+			std::cerr << "trying: " << configFileTemp << '\n';
+			//configFileTemp = "/etc/dispmanx_vncserver.conf";
+			readConfig = TryReadConfigFile(config, configFileTemp);
+		}
+	}
+
+	if (readConfig) {
+		std::cerr << "Read config file: " << configFileTemp << '\n';
+
+		config.lookupValue("relative", configData.relative);
+		config.lookupValue("unsafe", configData.unsafe);
+		config.lookupValue("fullscreen", configData.fullscreen);
+		config.lookupValue("multi-threaded", configData.multiThreaded);
+		config.lookupValue("password", configData.password);
+		config.lookupValue("port", configData.port);
+		config.lookupValue("screen", configData.screen);
+		config.lookupValue("frame-rate", configData.frameRate);
+	}
+	else
+		std::cerr << "No config file found\n";
+
+	return readConfig;
+}
+
+bool TryReadConfigFile(libconfig::Config& config, const std::string& file)
+{
+	try{
+		config.readFile(file.c_str());
+		return true;
+	}
+	catch (libconfig::FileIOException) {
+		return false;;
+	}
+	catch (libconfig::ParseException &e) {
+		std::stringstream ss;
+		ss << "Error: " << e.getError() << " on line " << e.getLine() << " while reading configuration file: " << file;
+		throw Exception(ss.str());
+	}
 }
 
 void usage(const char *programName)
@@ -142,6 +248,7 @@ void usage(const char *programName)
 		"Usage: " << programName << " [OPTION]...\n"
 		"\n"
 		"  -a, --absolute               absolute mouse movements\n"
+		"  -c, --config-file=FILE       use the specified configuration file\n"
 		"  -f, --fullscreen             always runs fullscreen mode\n"
 		"  -m, --multi-threaded         runs vnc in a separate thread\n"
 		"  -p, --port=PORT              makes vnc available on the speficied port\n"

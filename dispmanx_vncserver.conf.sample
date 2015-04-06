@@ -1,0 +1,8 @@
+relative = false;
+port = 0;
+screen = 0;
+unsafe = false;
+fullscreen = false;
+multi-threaded = false;
+password = "";
+frame-rate = 15;

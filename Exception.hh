@@ -2,6 +2,7 @@
 #define EXCEPTION_HH__
 
 #include <exception>
+#include <string>
 
 class Exception : public std::exception
 {
@@ -9,16 +10,16 @@ public:
 	Exception() {
 	}
 
-	Exception(const char *whatString)
+	Exception(const std::string& whatString)
 		: m_whatString(whatString) {
 	};
 
 	const char *what() const noexcept override {
-		return m_whatString;
+		return m_whatString.c_str();
 	}
 
 private:
-	const char *m_whatString = "";
+	std::string m_whatString;
 };
 
 class HelpException : public Exception
