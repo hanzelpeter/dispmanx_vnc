@@ -28,7 +28,7 @@ double getTime() {
 
 DMXVNCServer::DMXVNCServer(int BPP, int frameRate) {
 	this->BPP = BPP;
-	this->pictureTimeout = 1.0 / (float)frameRate;
+	this->targetPictureTimeout = 1.0 / (float)frameRate;
 }
 
 DMXVNCServer::~DMXVNCServer()
@@ -171,7 +171,9 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 				}
 
 				if (TakePicture((unsigned char *)server->frameBuffer)) {
-					if (bandwidthMode && !bandwidthController.largeFrameMode && imageMap.GetChangedRegionRatio() < 30) {
+					timeLastFrameChange = getTime();
+					pictureTimeout = targetPictureTimeout;
+					if (bandwidthMode && !bandwidthController.largeFrameMode && imageMap.GetChangedRegionRatio() < bandwidthController.largeUpdateFramesSize) {
 						for (int y = 0; y < imageMap.mapHeight; y++){
 							for (int x = 0; x < imageMap.mapWidth; x++){
 								if (imageMap.imageMap[(y * imageMap.mapWidth) + x]) {
@@ -188,6 +190,10 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 					{
 						rfbMarkRectAsModified(server, r_x0, r_y0, r_x1, r_y1);
 					}
+				}
+				else {
+					if (targetPictureTimeout < idlePictureTimeout)
+						pictureTimeout = std::min((double)idlePictureTimeout, targetPictureTimeout * (std::max(1.0, getTime() - timeLastFrameChange)));;
 				}
 
 				if (bandwidthMode) {
@@ -216,8 +222,10 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 
 		if (multiThreaded)
 			usleep(usec);
-		else
-			rfbProcessEvents(server, usec);
+		else {
+			if( rfbProcessEvents(server, usec))
+				pictureTimeout = targetPictureTimeout;
+		}
 	}
 }
 
@@ -226,10 +234,10 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 */
 double DMXVNCServer::TimeToTakePicture() {
 	double now = getTime();
-	double elapsed = now - timeLastPicture;
+	double elapsed = now - timeLastFrameStart;
 
 	if (elapsed > pictureTimeout)
-		timeLastPicture = now;
+		timeLastFrameStart = now;
 	return std::max(0.0, pictureTimeout - elapsed);
 };
 
@@ -509,15 +517,10 @@ void DMXVNCServer::DoPtr(int buttonMask, int x, int y, rfbClientPtr cl)
 
 	if (relativeMode) {
 		m_ufile.WriteEvent(EV_REL, REL_X, x - last_x);
-	}
-	else {
-		m_ufile.WriteEvent(EV_ABS, ABS_X, x);
-	}
-
-	if (relativeMode) {
 		m_ufile.WriteEvent(EV_REL, REL_Y, y - last_y);
 	}
 	else {
+		m_ufile.WriteEvent(EV_ABS, ABS_X, x);
 		m_ufile.WriteEvent(EV_ABS, ABS_Y, y);
 	}
 
@@ -604,11 +607,14 @@ void ImageMap::Resize(int height, int width)
 void ImageMap::Clear()
 {
 	std::fill(imageMap.begin(), imageMap.end(), false);
+	changedRegionRatio = -1;
 }
 
 int ImageMap::GetChangedRegionRatio()
 {
-	return std::count(imageMap.begin(), imageMap.end(), true) * 100 / imageMap.size();
+	if (changedRegionRatio == -1)
+		changedRegionRatio = std::count(imageMap.begin(), imageMap.end(), true) * 100 / imageMap.size();
+	return changedRegionRatio;
 }
 
 void BandwidthController::ControlMode(int changedRegionRatio)

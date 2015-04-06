@@ -27,6 +27,7 @@ public:
 	int width = 0;
 	int mapWidth = 0;
 	int mapHeight = 0;
+	int changedRegionRatio = -1;
 	std::vector<bool> imageMap;
 };
 
@@ -76,6 +77,8 @@ private:
 	UFile m_ufile;
 	rfbScreenInfoPtr server = nullptr;
 	int BPP = 0;
+	float idlePictureTimeout = 0.5;
+	float targetPictureTimeout = 0.0;
 	float pictureTimeout = 0.0;
 
 	std::string desktopName;
@@ -99,7 +102,8 @@ private:
 	bool multiThreaded = false;
 	int screen = 0;
 
-	double timeLastPicture = 0.0;
+	double timeLastFrameStart = 0.0;
+	double timeLastFrameChange = 0.0;
 	std::string lastPrintedMessage;
 
 	int padded_width = 0;
