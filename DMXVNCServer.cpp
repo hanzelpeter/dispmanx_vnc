@@ -184,10 +184,12 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 					if (info.width != server->width || info.height != server->height) {
 						if (downscale) {
 							frameBuffer.resize(frameBufferPitch*info.height / 2);
+							std::fill(frameBuffer.begin(), frameBuffer.end(), '\0');
 							rfbNewFramebuffer(server, &frameBuffer[0], frameBufferPaddedWidth, info.height / 2, 5, 3, BPP);
 						}
 						else {
 							frameBuffer.resize(frameBufferPitch*info.height);
+							std::fill(frameBuffer.begin(), frameBuffer.end(), '\0');
 							rfbNewFramebuffer(server, &frameBuffer[0], frameBufferPaddedWidth, info.height, 5, 3, BPP);
 						}
 						imageMap.Resize(info.height, info.width);
