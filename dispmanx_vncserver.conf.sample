@@ -6,3 +6,4 @@ fullscreen = false;
 multi-threaded = false;
 password = "";
 frame-rate = 15;
+downscale = false;
