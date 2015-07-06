@@ -52,7 +52,7 @@ void DMXVNCServer::Open()
 	pitch = ALIGN_UP(BPP * info.width, 32);
 	padded_width = pitch / BPP;
 
-	if (downscale) {
+	if (m_downscale) {
 		frameBufferPitch = ALIGN_UP(BPP * info.width / 2, 32);
 		frameBufferPaddedWidth = frameBufferPitch / BPP;
 	}
@@ -106,11 +106,11 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 	this->bandwidthMode = bandwidthMode;
 	this->screen = screen;
 	this->multiThreaded = multiThreaded;
-	this->downscale = downscale;
+	m_downscale = downscale;
 
 	Open();
 
-	if (downscale) {
+	if (m_downscale) {
 		server = rfbGetScreen(&argc, argv, frameBufferPaddedWidth, info.height / 2, 5, 3, BPP);
 	}
 	else {
@@ -140,7 +140,7 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 	else
 		server->desktopName = "VNC server via dispmanx";
 
-	if (downscale)
+	if (m_downscale)
 		frameBuffer.resize(frameBufferPitch*info.height / 2);
 	else
 		frameBuffer.resize(frameBufferPitch*info.height);
@@ -174,15 +174,23 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 
 	/* Loop, processing clients and taking pictures */
 	int errors = 0;
+	bool toggledDownscale = false;
 	while (!terminate && rfbIsActive(server)) {
 		double timeToTakePicture = 0.0;
 		if (clients && 0.0 == (timeToTakePicture = TimeToTakePicture())) {
 			try {
+				if(m_toggleDownscale)
+				{
+					Close();
+					m_downscale = !m_downscale;
+					m_toggleDownscale = false;
+					toggledDownscale = true;
+				}
 				if (!IsOpen())
 				{
 					Open();
-					if (info.width != server->width || info.height != server->height) {
-						if (downscale) {
+					if (toggledDownscale ||	info.width != server->width || info.height != server->height) {
+						if (m_downscale) {
 							frameBuffer.resize(frameBufferPitch*info.height / 2);
 							std::fill(frameBuffer.begin(), frameBuffer.end(), '\0');
 							rfbNewFramebuffer(server, &frameBuffer[0], frameBufferPaddedWidth, info.height / 2, 5, 3, BPP);
@@ -193,6 +201,7 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 							rfbNewFramebuffer(server, &frameBuffer[0], frameBufferPaddedWidth, info.height, 5, 3, BPP);
 						}
 						imageMap.Resize(info.height, info.width);
+						toggledDownscale = false;
 					}
 				}
 
@@ -203,7 +212,7 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 						for (int y = 0; y < imageMap.mapHeight; y++){
 							for (int x = 0; x < imageMap.mapWidth; x++){
 								if (imageMap.imageMap[(y * imageMap.mapWidth) + x]) {
-									if (downscale){
+									if (m_downscale){
 										rfbMarkRectAsModified(server,
 											std::max(r_x0 / 2, x * imageMap.pixelsPerRegion / 2),
 											std::max(r_y0 / 2, y * imageMap.pixelsPerRegion / 2),
@@ -223,7 +232,7 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 					}
 					else
 					{
-						if (downscale) {
+						if (m_downscale) {
 							rfbMarkRectAsModified(server, r_x0 / 2, r_y0 / 2, r_x1 / 2, r_y1 / 2);
 						}
 						else {
@@ -316,7 +325,7 @@ int DMXVNCServer::TakePicture(unsigned char *buffer)
 		imageMap.Clear();
 	}
 
-	if (downscale) {
+	if (m_downscale) {
 		uint16_t *buffer_16p = (uint16_t *)buffer;
 
 		r_y0 = info.height;
@@ -613,7 +622,7 @@ void DMXVNCServer::doptr(int buttonMask, int x, int y, rfbClientPtr cl)
 
 void DMXVNCServer::DoPtr(int buttonMask, int x, int y, rfbClientPtr cl)
 {
-	if (downscale)
+	if (m_downscale)
 	{
 		x *= 2;
 		y *= 2;
@@ -670,7 +679,11 @@ void DMXVNCServer::dokey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 void DMXVNCServer::DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 {
 	if (down) {
-		m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 1);
+		int scancode = keysym2scancode(key);
+		//if(scancode == KEY_F10)
+		//	m_toggleDownscale = true;
+		
+		m_ufile.WriteEvent(EV_KEY, scancode, 1);
 		m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
 	}
 	else {

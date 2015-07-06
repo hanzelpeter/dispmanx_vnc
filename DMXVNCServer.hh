@@ -103,7 +103,8 @@ private:
 	bool safeMode = false;
 	bool bandwidthMode = false;
 	bool multiThreaded = false;
-	bool downscale = false;
+	bool m_downscale = false;
+	bool m_toggleDownscale = false;
 	int screen = 0;
 
 	double timeLastFrameStart = 0.0;
