@@ -34,10 +34,13 @@ And finally select the version you want to use with the following command
 
 ...or simply change the "CC = g++" to "CC = g++-4.7" in the Makefile
 
-On raspbian jessie or osmc, prepare using the following steps.
---------------------------------------------------------------
-
+On raspbian jessie, prepare using the following
+-----------------------------------------------
 	sudo apt-get install g++ libvncserver-dev libconfig++-dev
+
+On OSMC, prepare using the following
+------------------------------------
+	sudo apt-get install build-essential rbp-userland-dev-osmc libvncserver-dev libconfig++-dev
 
 If the keyboard or mouse does not work
 --------------------------------------
