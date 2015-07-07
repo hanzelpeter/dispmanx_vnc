@@ -5,7 +5,7 @@ VNC Server for Raspberry PI using dispmanx
 
 Build with "make"
 
-Building requires tha the following is installed: libvncserver-dev, libconfig++-dev and g++ 4.7 or newer. 
+Building requires that the following is installed: libvncserver-dev, libconfig++-dev and g++ 4.7 or newer. 
 
 Features
 --------
@@ -18,8 +18,8 @@ Features
 - Adaptable algorithm for the best performance both for update intensive applications like video and animations, and low CPU usage for updates to smaller regions of the screen
 - Supports efficient downscaling to a quarter of the resoltion on the server side. Saves CPU, bandwidth and is practical for remote control of e.g. Kodi in high resolution from a computer with lower resolution
 
-On raspbian wheezy, prepare using the following steps.
-------------------------------------------------------
+On raspbian wheezy, prepare using the following steps
+-----------------------------------------------------
 
 	sudo apt-get install g++-4.7 libvncserver-dev libconfig++-dev
 
