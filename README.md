@@ -57,6 +57,7 @@ Make this load automatically at boot by adding the following on a separate row i
 After build
 -----------
 Run the program by issuing
+
 	sudo ./dispmanx_vncserver
 	
 Parameters
