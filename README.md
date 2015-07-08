@@ -21,18 +21,20 @@ Features
 On raspbian wheezy, prepare using the following steps
 -----------------------------------------------------
 
-	sudo apt-get install g++-4.7 libvncserver-dev libconfig++-dev
+	sudo apt-get install g++-4.8 libvncserver-dev libconfig++-dev
 
 Followed by 
 
 	sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.6 
-	sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.7 40 --slave /usr/bin/g++ g++ /usr/bin/g++-4.7 
+	sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 40 --slave /usr/bin/g++ g++ /usr/bin/g++-4.8 
 
 And finally select the version you want to use with the following command
 
 	sudo update-alternatives --config gcc
 
-...or simply change the "CC = g++" to "CC = g++-4.7" in the Makefile
+...or simply build with
+
+	CXX=g++-4.8 make
 
 On raspbian jessie, prepare using the following
 -----------------------------------------------
