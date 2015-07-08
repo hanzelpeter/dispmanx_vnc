@@ -34,7 +34,7 @@ And finally select the version you want to use with the following command
 
 ...or simply build with
 
-	CXX=g++-4.8 make
+	make CXX=g++-4.8
 
 On raspbian jessie, prepare using the following
 -----------------------------------------------
