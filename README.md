@@ -5,7 +5,7 @@ VNC Server for Raspberry PI using dispmanx
 
 compile with ./makeit
 
-you need to have installed libvncserver-dev
+you need to have installed libvncserver-dev and rbp-userland-dev-osmc
 
 If you want to use X, modprobe evdev first.
 Use -r for relative mode
