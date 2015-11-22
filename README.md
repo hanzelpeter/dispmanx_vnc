@@ -81,6 +81,42 @@ Config file
 -----------
 The program supports reading all the settings from a configuration file. See the attached .conf.sample-file. The default name of the config file is the same as of the binary with the extension ".conf". The program will first look in the same folder as the binary is placed, if not found there it will try /etc/. The configuration file name and location may be specified with the --config-file command line parameter. Any command line arguments will override those of the config file.
 
+
+
+Screen resolution / Headless operation
+--------------------------------------
+By default, when HDMI not connected, the composite port is active with a resolution of 720x480.
+Edit the /boot/config.txt file to change resolution.
+
+	sudo nano /boot/config.txt
+
+Add or replace the following settings to enable 1080p 50Hz suitable for a TV set
+
+	# This enables HDMI resolutions when HDMI is not connected
+	hdmi_force_hotplug=1
+
+	# Group
+	# 1=CEA, used for connecting to consumer TV sets
+	# 2=DMT, used for connecting to a computer monitor
+	hdmi_group=1
+
+	# CEA Modes
+	#  4 =  720p     60Hz
+	# 19 =  720p     50Hz
+	# 16 = 1080p     50Hz
+	# 31 = 1080p     50Hz
+	# DMT Modes
+	# 39 = 1360x768    60Hz
+	# 82 = 1920x1080   60Hz
+	hdmi_mode=31
+
+The modes specified here are just a few useful examples, please refer to the documentation of config.txt at raspberrypi.org for further information
+https://www.raspberrypi.org/documentation/configuration/config-txt.md
+
+If you occasionally connect to a monitor with HDMI, it is an advantage to specify hdmi_group and hdmi_mode that matches the monitor.
+
+A reboot is required after changing this file for the changes to take effect.
+
 Other
 -----
 Relative mode makes hello_triangle2 to work. And also mouse moving in minecraft is better.
