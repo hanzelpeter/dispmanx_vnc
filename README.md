@@ -103,7 +103,7 @@ Add or replace the following settings to enable 1080p 50Hz suitable for a TV set
 	# CEA Modes
 	#  4 =  720p     60Hz
 	# 19 =  720p     50Hz
-	# 16 = 1080p     50Hz
+	# 16 = 1080p     60Hz
 	# 31 = 1080p     50Hz
 	# DMT Modes
 	# 39 = 1360x768    60Hz
