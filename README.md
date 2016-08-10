@@ -3,7 +3,7 @@ dispmanx_vnc
 
 VNC Server for Raspberry PI using dispmanx
 
-compile with ./makeit
+compile with ./makeit or use make
 
 you need to have installed libvncserver-dev
 
