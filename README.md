@@ -67,6 +67,7 @@ Parameters
 	-c, --config-file=FILE       use the specified configuration file
 	-d, --downscale              downscales the screen to a quarter in vnc
 	-f, --fullscreen             always runs fullscreen mode
+	-l, --localhost              only listens to local ports
 	-m, --multi-threaded         runs vnc in a separate thread
 	-p, --port=PORT              makes vnc available on the speficied port
 	-P, --password=PASSWORD      protects the session with PASSWORD
@@ -75,6 +76,7 @@ Parameters
 	-t, --frame-rate=RATE        sets the target frame rate, default is 15
 	-u, --unsafe                 disables more robust handling of resolution
 	                             change at a small performance gain
+	-v, --vnc-params             parameters to send to libvncserver
 	    --help                   displays this help and exit
 
 Config file
