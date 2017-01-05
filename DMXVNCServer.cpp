@@ -4,6 +4,8 @@
 
 #undef max
 
+char localhost_address[] = "localhost";
+
 #ifndef ALIGN_UP
 #define ALIGN_UP(x,y)  ((x + (y)-1) & ~((y)-1))
 #endif
@@ -39,6 +41,10 @@ DMXVNCServer::~DMXVNCServer()
 		rfbScreenCleanup(server);
 		server = nullptr;
 	};
+
+	if(we.we_offs) {
+		wordfree(&we);
+	}
 }
 
 void DMXVNCServer::Open()
@@ -95,9 +101,11 @@ bool DMXVNCServer::IsOpen()
 	return m_display.IsOpen();
 }
 
-void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& password,
+void DMXVNCServer::Run(int port, const std::string& password,
 						int screen, bool relativeMode, bool safeMode,
-						bool bandwidthMode, bool multiThreaded, bool downscale)
+						bool bandwidthMode, bool multiThreaded, bool downscale,
+						bool localhost,
+						const std::string& vncParams)
 {
 	long usec;
 
@@ -110,17 +118,32 @@ void DMXVNCServer::Run(int argc, char *argv[], int port, const std::string& pass
 
 	Open();
 
+	we.we_offs = 1;
+	wordexp(vncParams.c_str(), &we, WRDE_DOOFFS);
+	int argc = we.we_offs + we.we_wordc;
+	std::vector<char *> argv(argc);
+
+	for(int i = 0; i < argc; i++) {
+		argv[i] = we.we_wordv[i];
+	}	
+
 	if (m_downscale) {
-		server = rfbGetScreen(&argc, argv, frameBufferPaddedWidth, info.height / 2, 5, 3, BPP);
+		server = rfbGetScreen(&argc, &argv[0], frameBufferPaddedWidth, info.height / 2, 5, 3, BPP);
 	}
 	else {
-		server = rfbGetScreen(&argc, argv, frameBufferPaddedWidth, info.height, 5, 3, BPP);
+		server = rfbGetScreen(&argc, &argv[0], frameBufferPaddedWidth, info.height, 5, 3, BPP);
 	}
+	
 	if (!server)
 		throw Exception("rfbGetScreen failed");
 
 	if (port){
 		server->port = port;
+	}
+	
+	if(localhost) {
+		server->listen6Interface = localhost_address;
+		rfbStringToAddr(localhost_address, &server->listenInterface);
 	}
 
 	if (password.length()) {

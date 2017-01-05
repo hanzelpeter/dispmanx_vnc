@@ -7,3 +7,5 @@ multi-threaded = false;
 password = "";
 frame-rate = 15;
 downscale = false;
+localhost = false;
+vnc-params = "";

@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include <wordexp.h>
 
 #include <rfb/rfb.h>
 #include <rfb/keysym.h>
@@ -55,9 +56,11 @@ public:
 	void Open();
 	void Close();
 	bool IsOpen();
-	void Run(int argc, char *argv[], int port, const std::string& password,
+	void Run(int port, const std::string& password,
 				int screen, bool relativeMode, bool safeMode,
-				bool bandwidthMode, bool multiThreaded, bool downscale);
+				bool bandwidthMode, bool multiThreaded, bool downscale,
+				bool localhost,
+				const std::string& vncParams);
 	double TimeToTakePicture();
 	int TakePicture(unsigned char *buffer);
 	int keysym2scancode(rfbKeySym key);
@@ -124,6 +127,8 @@ private:
 
 	VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
 	uint32_t  vc_image_ptr = 0;
+	
+	wordexp_t we{};
 };
 
 #endif // DMXVNCSERVER_HH

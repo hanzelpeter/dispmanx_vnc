@@ -36,8 +36,10 @@ struct ConfigData
 	bool unsafe = false;
 	bool fullscreen = false;
 	bool multiThreaded = false;
+	bool localhost = false;
 	int frameRate = 15;
 	std::string configFile;
+	std::string vncParams;
 };
 
 void GetConfigData(int argc, char *argv[], ConfigData& configData);
@@ -72,17 +74,21 @@ int main(int argc, char *argv[])
 			"  frame-rate = " << configData.frameRate << "\n"
 			"  downscale = " << (configData.downscale ? "true" : "false") << "\n"
 			"  fullscreen = " << (configData.fullscreen ? "true" : "false") << "\n"
+			"  localhost = " << (configData.localhost ? "true" : "false") << "\n"
 			"  multi-threaded = " << (configData.multiThreaded ? "true" : "false") << "\n"
 			"  password = " << (configData.password.length() ? "***" : "") << "\n"
 			"  port = " << configData.port << "\n"
 			"  relative = " << (configData.relative ? "true" : "false") << "\n"
 			"  screen = " << configData.screen << "\n"
-			"  unsafe = " << (configData.unsafe ? "true" : "false") << "\n";
+			"  unsafe = " << (configData.unsafe ? "true" : "false") << "\n"
+			"  vnc-params = " << configData.vncParams << "\n";
 
 		DMXVNCServer vncServer(BPP, configData.frameRate);
-		vncServer.Run(argc, argv, configData.port, configData.password, configData.screen,
+		vncServer.Run(configData.port, configData.password, configData.screen,
 									configData.relative, !configData.unsafe, !configData.fullscreen,
-									configData.multiThreaded, configData.downscale);
+									configData.multiThreaded, configData.downscale,
+									configData.localhost,
+									configData.vncParams);
 	}
 	catch (HelpException) {
 		usage(argv[0]);
@@ -118,18 +124,20 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 		{ "downscale", no_argument, nullptr, 'd' },
 		{ "unsafe", no_argument, nullptr, 'u' },
 		{ "fullscreen", no_argument, nullptr, 'f' },
+		{ "localhost", no_argument, nullptr, 'l' },
 		{ "multi-threaded", no_argument, nullptr, 'm' },
 		{ "password", required_argument, nullptr, 'P' },
 		{ "port", required_argument, nullptr, 'p' },
 		{ "screen", required_argument, nullptr, 's' },
 		{ "frame-rate", required_argument, nullptr, 't' },
+		{ "vnc-params", required_argument, nullptr, 'v' },
 		{ "help", no_argument, nullptr, CHAR_MIN - 2 },
 		{ nullptr, 0, nullptr, 0 }
 	};
 
 	int c;
 	optind = 1;
-	while (-1 != (c = getopt_long(argc, argv, "abc:dfmP:p:rs:t:u", long_options, nullptr))) {
+	while (-1 != (c = getopt_long(argc, argv, "abc:dflmP:p:rs:t:uv:", long_options, nullptr))) {
 		switch (c) {
 		case 'a':
 			configData.relative = false;
@@ -155,6 +163,10 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 			configData.fullscreen = true;
 			break;
 
+		case 'l':
+			configData.localhost = true;
+			break;
+
 		case 'm':
 			configData.multiThreaded = true;
 			break;
@@ -173,6 +185,10 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 
 		case 't':
 			configData.frameRate = atoi(optarg);
+			break;
+
+		case 'v':
+			configData.vncParams = optarg;
 			break;
 
 		case CHAR_MIN - 2:
@@ -223,11 +239,13 @@ bool ReadConfigFile(const char *programName, const std::string& configFile, Conf
 		config.lookupValue("unsafe", configData.unsafe);
 		config.lookupValue("downscale", configData.downscale);
 		config.lookupValue("fullscreen", configData.fullscreen);
+		config.lookupValue("localhost", configData.localhost);
 		config.lookupValue("multi-threaded", configData.multiThreaded);
 		config.lookupValue("password", configData.password);
 		config.lookupValue("port", configData.port);
 		config.lookupValue("screen", configData.screen);
 		config.lookupValue("frame-rate", configData.frameRate);
+		config.lookupValue("vnc-params", configData.vncParams);
 	}
 	else
 		std::cerr << "No config file found\n";
@@ -260,6 +278,7 @@ void usage(const char *programName)
 		"  -c, --config-file=FILE       use the specified configuration file\n"
 		"  -d, --downscale              downscales the screen to a quarter in vnc\n"
 		"  -f, --fullscreen             always runs fullscreen mode\n"
+		"  -l, --localhost              only listens to local ports\n"
 		"  -m, --multi-threaded         runs vnc in a separate thread\n"
 		"  -p, --port=PORT              makes vnc available on the speficied port\n"
 		"  -P, --password=PASSWORD      protects the session with PASSWORD\n"
@@ -268,5 +287,6 @@ void usage(const char *programName)
 		"  -t, --frame-rate=RATE        sets the target frame rate, default is 15\n"
 		"  -u, --unsafe                 disables more robust handling of resolution\n"
 		"                               change at a small performance gain\n"
+		"  -v, --vnc-params             parameters to send to libvncserver\n"
 		"      --help                   displays this help and exit\n";
 }
