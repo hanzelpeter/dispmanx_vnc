@@ -77,7 +77,8 @@ private:
 	BCMHost m_bcmHost;
 	DMXDisplay m_display;
 	DMXResource m_resource;
-	UFile m_ufile;
+	UFile m_keyboard;
+	UFile m_mouse;
 	rfbScreenInfoPtr server = nullptr;
 	int BPP = 0;
 	float idlePictureTimeout = 0.5;

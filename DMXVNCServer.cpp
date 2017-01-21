@@ -190,7 +190,8 @@ void DMXVNCServer::Run(int port, const std::string& password,
 	if (multiThreaded)
 		rfbRunEventLoop(server,-1,TRUE);
 
-	m_ufile.Open(this->relativeMode, info.width, info.height);
+	m_mouse.Open(this->relativeMode, info.width, info.height);
+	m_keyboard.Open();
 
 	if (bandwidthMode)
 		imageMap.Resize(info.height, info.width);
@@ -654,40 +655,40 @@ void DMXVNCServer::DoPtr(int buttonMask, int x, int y, rfbClientPtr cl)
 	//printf("mouse: 0x%x at %d,%d\n", buttonMask, x,y);
 
 	if (relativeMode) {
-		m_ufile.WriteEvent(EV_REL, REL_X, x - last_x);
-		m_ufile.WriteEvent(EV_REL, REL_Y, y - last_y);
+		m_mouse.WriteEvent(EV_REL, REL_X, x - last_x);
+		m_mouse.WriteEvent(EV_REL, REL_Y, y - last_y);
 	}
 	else {
-		m_ufile.WriteEvent(EV_ABS, ABS_X, x);
-		m_ufile.WriteEvent(EV_ABS, ABS_Y, y);
+		m_mouse.WriteEvent(EV_ABS, ABS_X, x);
+		m_mouse.WriteEvent(EV_ABS, ABS_Y, y);
 	}
 
 	last_x = x;
 	last_y = y;
 
-	m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
+	m_mouse.WriteEvent(EV_SYN, SYN_REPORT, 0);
 	if (mouse_last != buttonMask) {
 		int left_l = mouse_last & 0x1;
 		int left_w = buttonMask & 0x1;
 
 		if (left_l != left_w) {
-			m_ufile.WriteEvent(EV_KEY, BTN_LEFT, left_w);
-			m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
+			m_mouse.WriteEvent(EV_KEY, BTN_LEFT, left_w);
+			m_mouse.WriteEvent(EV_SYN, SYN_REPORT, 0);
 		}
 
 		int middle_l = mouse_last & 0x2;
 		int middle_w = buttonMask & 0x2;
 
 		if (middle_l != middle_w) {
-			m_ufile.WriteEvent(EV_KEY, BTN_MIDDLE, middle_w >> 1);
-			m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
+			m_mouse.WriteEvent(EV_KEY, BTN_MIDDLE, middle_w >> 1);
+			m_mouse.WriteEvent(EV_SYN, SYN_REPORT, 0);
 		}
 		int right_l = mouse_last & 0x4;
 		int right_w = buttonMask & 0x4;
 
 		if (right_l != right_w) {
-			m_ufile.WriteEvent(EV_KEY, BTN_RIGHT, right_w >> 2);
-			m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
+			m_mouse.WriteEvent(EV_KEY, BTN_RIGHT, right_w >> 2);
+			m_mouse.WriteEvent(EV_SYN, SYN_REPORT, 0);
 		}
 
 		mouse_last = buttonMask;
@@ -706,12 +707,12 @@ void DMXVNCServer::DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 		//if(scancode == KEY_F10)
 		//	m_toggleDownscale = true;
 		
-		m_ufile.WriteEvent(EV_KEY, scancode, 1);
-		m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
+		m_keyboard.WriteEvent(EV_KEY, scancode, 1);
+		m_keyboard.WriteEvent(EV_SYN, SYN_REPORT, 0);
 	}
 	else {
-		m_ufile.WriteEvent(EV_KEY, keysym2scancode(key), 0);
-		m_ufile.WriteEvent(EV_SYN, SYN_REPORT, 0);
+		m_keyboard.WriteEvent(EV_KEY, keysym2scancode(key), 0);
+		m_keyboard.WriteEvent(EV_SYN, SYN_REPORT, 0);
 	}
 }
 
