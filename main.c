@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include <rfb/rfb.h>
@@ -57,6 +58,7 @@ int mouse_last = 0;
 int relative_mode = 0;
 int last_x;
 int last_y;
+bool down_keys[KEY_CNT];
 
 /*
 * throttle camera updates
@@ -206,6 +208,7 @@ void initUinput()
 	struct uinput_user_dev   uinp;
 	int retcode, i;
 
+	memset(down_keys, 0, sizeof(down_keys));
 
 	ufile = open("/dev/uinput", O_WRONLY | O_NDELAY );
 	printf("open /dev/uinput returned %d.\n", ufile);
@@ -471,14 +474,16 @@ static void dokey(rfbBool down,rfbKeySym key,rfbClientPtr cl)
 {
 
 	struct input_event       event;
+	int scancode = keysym2scancode(key);
+	bool was_down = down_keys[scancode];
 
 	if(down) {
 
 		memset(&event, 0, sizeof(event));
 		gettimeofday(&event.time, NULL);
 		event.type = EV_KEY;
-		event.code = keysym2scancode(key); //nomodifiers!
-		event.value = 1; //key pressed
+		event.code = scancode; //nomodifiers!
+		event.value = was_down ? 2 : 1; //key repeat/press
 		write(ufile, &event, sizeof(event));
 
 		memset(&event, 0, sizeof(event));
@@ -488,12 +493,14 @@ static void dokey(rfbBool down,rfbKeySym key,rfbClientPtr cl)
 		event.value = 0;
 		write(ufile, &event, sizeof(event));
 
+		down_keys[scancode] = true;
+
 
 	} else {
 		memset(&event, 0, sizeof(event));
 		gettimeofday(&event.time, NULL);
 		event.type = EV_KEY;
-		event.code = keysym2scancode(key); //nomodifiers!
+		event.code = scancode; //nomodifiers!
 		event.value = 0; //key realeased
 		write(ufile, &event, sizeof(event));
 
@@ -504,7 +511,7 @@ static void dokey(rfbBool down,rfbKeySym key,rfbClientPtr cl)
 		event.value = 0;
 		write(ufile, &event, sizeof(event));
 
-
+		down_keys[scancode] = false;
 	}
 }
 
