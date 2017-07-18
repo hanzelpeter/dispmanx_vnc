@@ -115,6 +115,8 @@ private:
 	double timeLastFrameChange = 0.0;
 	std::string lastPrintedMessage;
 
+	bool downKeys[KEY_CNT];
+
 	int padded_width = 0;
 	int pitch = 0;
 	int r_x0 = 0;
