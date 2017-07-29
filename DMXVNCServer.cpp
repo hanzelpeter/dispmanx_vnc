@@ -750,18 +750,25 @@ void DMXVNCServer::dokey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 
 void DMXVNCServer::DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 {
-	if (down) {
-		int scancode = keysym2scancode(key);
-		//if(scancode == KEY_F10)
-		//	m_toggleDownscale = true;
-		
-		m_keyboard.WriteEvent(EV_KEY, scancode, 1);
-		m_keyboard.WriteEvent(EV_SYN, SYN_REPORT, 0);
+	int scancode = keysym2scancode(key);
+	bool wasDown = downKeys[scancode];
+	int event;
+
+	if (down && wasDown) {
+		event = 2; // key repeat
+	} else if (down) {
+		event = 1; // key down
+	} else {
+		event = 0; // key up
 	}
-	else {
-		m_keyboard.WriteEvent(EV_KEY, keysym2scancode(key), 0);
-		m_keyboard.WriteEvent(EV_SYN, SYN_REPORT, 0);
-	}
+
+	//if(down && !wasDown && scancode == KEY_F10)
+	//	m_toggleDownscale = true;
+
+	m_keyboard.WriteEvent(EV_KEY, scancode, event);
+	m_keyboard.WriteEvent(EV_SYN, SYN_REPORT, 0);
+
+	downKeys[scancode] = down;
 }
 
 enum rfbNewClientAction DMXVNCServer::newclient(rfbClientPtr cl)
