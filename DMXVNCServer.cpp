@@ -630,6 +630,8 @@ int DMXVNCServer::keysym2scancode(rfbKeySym key)
 		case XK_Delete:    scancode = KEY_DELETE; break;
 		case XK_Page_Up:    scancode = KEY_PAGEUP; break;
 		case XK_Escape:    scancode = KEY_ESC; break;
+		
+		case XK_Menu:        scancode = KEY_MENU; break;
 
 		case XK_KP_Divide:   scancode = KEY_KPSLASH; break;
 		case XK_KP_Multiply: scancode = KEY_KPASTERISK; break;
