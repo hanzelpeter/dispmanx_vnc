@@ -1,5 +1,4 @@
-#ifndef DMXVNCSERVER_HH
-#define DMXVNCSERVER_HH
+#pragma once
 
 #include <vector>
 #include <set>
@@ -9,10 +8,11 @@
 #include <wordexp.h>
 
 #include <rfb/rfb.h>
-#include <rfb/keysym.h>
 
 #include "BCMHost.hh"
 #include "DMXDisplay.hh"
+#include "DMXKeyboard.hh"
+#include "DMXMouse.hh"
 #include "DMXResource.hh"
 #include "UFile.hh"
 
@@ -63,11 +63,8 @@ public:
 				const std::string& vncParams);
 	double TimeToTakePicture();
 	int TakePicture(unsigned char *buffer);
-	int keysym2scancode(rfbKeySym key);
-	static void doptr(int buttonMask, int x, int y, rfbClientPtr cl);
-	void DoPtr(int buttonMask, int x, int y, rfbClientPtr cl);
-	static void dokey(rfbBool down, rfbKeySym key, rfbClientPtr cl);
-	void DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl);
+	static void DoPtr(int buttonMask, int x, int y, rfbClientPtr cl);
+	static void DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl);
 	static enum rfbNewClientAction newclient(rfbClientPtr cl);
 	enum rfbNewClientAction NewClient(rfbClientPtr cl);
 	static void clientgone(rfbClientPtr cl);
@@ -77,8 +74,8 @@ private:
 	BCMHost m_bcmHost;
 	DMXDisplay m_display;
 	DMXResource m_resource;
-	UFile m_keyboard;
-	UFile m_mouse;
+	DMXKeyboard m_keyboard;
+	DMXMouse m_mouse;
 	rfbScreenInfoPtr server = nullptr;
 	int BPP = 0;
 	float idlePictureTimeout = 0.5;
@@ -103,7 +100,6 @@ private:
 	void *back_image = nullptr;
 
 	DISPMANX_MODEINFO_T info = { 0 };
-	bool relativeMode = false;
 	bool safeMode = false;
 	bool bandwidthMode = false;
 	bool multiThreaded = false;
@@ -115,8 +111,6 @@ private:
 	double timeLastFrameChange = 0.0;
 	std::string lastPrintedMessage;
 
-	bool downKeys[KEY_CNT];
-
 	int padded_width = 0;
 	int pitch = 0;
 	int r_x0 = 0;
@@ -124,14 +118,8 @@ private:
 	int r_x1 = 0;
 	int r_y1 = 0;
 
-	int mouse_last = 0;
-	int last_x = 0;
-	int last_y = 0;
-
 	VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
 	uint32_t  vc_image_ptr = 0;
 	
 	wordexp_t we{};
 };
-
-#endif // DMXVNCSERVER_HH

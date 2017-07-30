@@ -15,7 +15,7 @@ public:
 
 private:
 	std::string m_name;
-	int ufile = -1;
+	int m_ufile = -1;
 };
 
 #endif //UFILE_HH

@@ -9,6 +9,8 @@ SOURCES = main.cpp \
 		UFile.cpp \
 		DMXResource.cpp \
 		DMXDisplay.cpp \
+		DMXKeyboard.cpp \
+		DMXMouse.cpp \
 		DMXVNCServer.cpp
 
 OBJS = $(SOURCES:.cpp=.o)

@@ -17,9 +17,9 @@ UFile::~UFile()
 
 void UFile::Open(bool relativeMode, int width, int height)
 {
-	ufile = open("/dev/uinput", O_WRONLY | O_NDELAY);
-	printf("open /dev/uinput returned %d.\n", ufile);
-	if (ufile == 0) {
+	m_ufile = open("/dev/uinput", O_WRONLY | O_NDELAY);
+	printf("open /dev/uinput returned %d.\n", m_ufile);
+	if (m_ufile == 0) {
 		throw Exception("Could not open uinput.\n");
 	}
 
@@ -31,7 +31,7 @@ void UFile::Open(bool relativeMode, int width, int height)
 	if(width) {
 		m_name = "VNCServer Mouse";
 
-		ioctl(ufile, UI_SET_EVBIT, EV_KEY);
+		ioctl(m_ufile, UI_SET_EVBIT, EV_KEY);
 
 		if (!relativeMode) {
 			uinp.absmin[ABS_X] = 0;
@@ -40,40 +40,40 @@ void UFile::Open(bool relativeMode, int width, int height)
 			uinp.absmax[ABS_Y] = height;
 		}
 
-	        ioctl(ufile, UI_SET_KEYBIT, BTN_LEFT);
-	        ioctl(ufile, UI_SET_KEYBIT, BTN_RIGHT);
-	        ioctl(ufile, UI_SET_KEYBIT, BTN_MIDDLE);
+	        ioctl(m_ufile, UI_SET_KEYBIT, BTN_LEFT);
+	        ioctl(m_ufile, UI_SET_KEYBIT, BTN_RIGHT);
+	        ioctl(m_ufile, UI_SET_KEYBIT, BTN_MIDDLE);
 
 	        if (relativeMode) {
-	                ioctl(ufile, UI_SET_EVBIT, EV_REL);
-	                ioctl(ufile, UI_SET_RELBIT, REL_X);
-	                ioctl(ufile, UI_SET_RELBIT, REL_Y);
+	                ioctl(m_ufile, UI_SET_EVBIT, EV_REL);
+	                ioctl(m_ufile, UI_SET_RELBIT, REL_X);
+	                ioctl(m_ufile, UI_SET_RELBIT, REL_Y);
 	        }
 	        else {
-	                ioctl(ufile, UI_SET_EVBIT, EV_ABS);
-                	ioctl(ufile, UI_SET_ABSBIT, ABS_X);
-        	        ioctl(ufile, UI_SET_ABSBIT, ABS_Y);
+	                ioctl(m_ufile, UI_SET_EVBIT, EV_ABS);
+                	ioctl(m_ufile, UI_SET_ABSBIT, ABS_X);
+        	        ioctl(m_ufile, UI_SET_ABSBIT, ABS_Y);
 	        }
 	}
 	else {
 		m_name = "VNCServer Keyboard";
 
-		ioctl(ufile, UI_SET_EVBIT, EV_KEY);
-		ioctl(ufile, UI_SET_EVBIT, EV_REP);
-		ioctl(ufile, UI_SET_EVBIT, EV_SYN);
+		ioctl(m_ufile, UI_SET_EVBIT, EV_KEY);
+		ioctl(m_ufile, UI_SET_EVBIT, EV_REP);
+		ioctl(m_ufile, UI_SET_EVBIT, EV_SYN);
 
 		for (int i = 0; i<KEY_MAX; i++) {
-			ioctl(ufile, UI_SET_KEYBIT, i);
+			ioctl(m_ufile, UI_SET_KEYBIT, i);
 		}
 	}
 
 	strncpy(uinp.name, m_name.c_str(), UINPUT_MAX_NAME_SIZE);
 
 	int retcode;
-	retcode = write(ufile, &uinp, sizeof(uinp));
+	retcode = write(m_ufile, &uinp, sizeof(uinp));
 	printf("First write returned %d.\n", retcode);
 
-	retcode = ioctl(ufile, UI_DEV_CREATE);
+	retcode = ioctl(m_ufile, UI_DEV_CREATE);
 	printf("ioctl UI_DEV_CREATE returned %d.\n", retcode);
 	if (retcode) {
 		throw Exception("Error create uinput device %d.\n");
@@ -82,11 +82,11 @@ void UFile::Open(bool relativeMode, int width, int height)
 
 void UFile::Close()
 {
-	if (ufile != -1)
+	if (m_ufile != -1)
 	{
-		ioctl(ufile, UI_DEV_DESTROY);
-		close(ufile);
-		ufile = -1;
+		ioctl(m_ufile, UI_DEV_DESTROY);
+		close(m_ufile);
+		m_ufile = -1;
 	}
 }
 
@@ -97,7 +97,7 @@ void UFile::WriteEvent(__u16 type, __u16 code, __s32 value)
 	inputEvent.type = type;
 	inputEvent.code = code;
 	inputEvent.value = value;
-	if(-1 == write(ufile, &inputEvent, sizeof(inputEvent)))
+	if(-1 == write(m_ufile, &inputEvent, sizeof(inputEvent)))
 	{
 		std::cout << "Error " << errno << " writing to " << m_name << '\n';
 	}
