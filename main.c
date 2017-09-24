@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include <rfb/rfb.h>
@@ -57,6 +58,7 @@ int mouse_last = 0;
 int relative_mode = 0;
 int last_x;
 int last_y;
+bool down_keys[KEY_CNT];
 
 /*
 * throttle camera updates
@@ -206,6 +208,7 @@ void initUinput()
 	struct uinput_user_dev   uinp;
 	int retcode, i;
 
+	memset(down_keys, 0, sizeof(down_keys));
 
 	ufile = open("/dev/uinput", O_WRONLY | O_NDELAY );
 	printf("open /dev/uinput returned %d.\n", ufile);
@@ -354,6 +357,54 @@ static int keysym2scancode(rfbKeySym key)
 		case XK_Page_Up:    scancode  = KEY_PAGEUP; break;
 		case XK_Escape:    scancode   = KEY_ESC; break;
 
+		case XK_KP_Divide:   scancode = KEY_KPSLASH; break;
+		case XK_KP_Multiply: scancode = KEY_KPASTERISK; break;
+		case XK_KP_Add:      scancode = KEY_KPPLUS; break;
+		case XK_KP_Subtract: scancode = KEY_KPMINUS; break;
+		case XK_KP_Enter:    scancode = KEY_KPENTER; break;
+
+		case XK_KP_Decimal:
+		case XK_KP_Delete:
+			scancode = KEY_KPDOT; break;
+
+		case XK_KP_0:
+		case XK_KP_Insert:
+			scancode = KEY_KP0; break;
+
+		case XK_KP_1:
+		case XK_KP_End:
+			scancode = KEY_KP1; break;
+
+		case XK_KP_2:
+		case XK_KP_Down:
+			scancode = KEY_KP2; break;
+
+		case XK_KP_3:
+		case XK_KP_Page_Down:
+			scancode = KEY_KP3; break;
+
+		case XK_KP_4:
+		case XK_KP_Left:
+			scancode = KEY_KP4; break;
+
+		case XK_KP_5:
+			scancode = KEY_KP5; break;
+
+		case XK_KP_6:
+		case XK_KP_Right:
+			scancode = KEY_KP6; break;
+
+		case XK_KP_7:
+		case XK_KP_Home:
+			scancode = KEY_KP7; break;
+
+		case XK_KP_8:
+		case XK_KP_Up:
+			scancode = KEY_KP8; break;
+
+		case XK_KP_9:
+		case XK_KP_Page_Up:
+			scancode = KEY_KP9; break;
 
 		case 0x0003:    scancode = KEY_CENTER;      break;
 		}
@@ -471,14 +522,16 @@ static void dokey(rfbBool down,rfbKeySym key,rfbClientPtr cl)
 {
 
 	struct input_event       event;
+	int scancode = keysym2scancode(key);
+	bool was_down = down_keys[scancode];
 
 	if(down) {
 
 		memset(&event, 0, sizeof(event));
 		gettimeofday(&event.time, NULL);
 		event.type = EV_KEY;
-		event.code = keysym2scancode(key); //nomodifiers!
-		event.value = 1; //key pressed
+		event.code = scancode; //nomodifiers!
+		event.value = was_down ? 2 : 1; //key repeat/press
 		write(ufile, &event, sizeof(event));
 
 		memset(&event, 0, sizeof(event));
@@ -488,12 +541,14 @@ static void dokey(rfbBool down,rfbKeySym key,rfbClientPtr cl)
 		event.value = 0;
 		write(ufile, &event, sizeof(event));
 
+		down_keys[scancode] = true;
+
 
 	} else {
 		memset(&event, 0, sizeof(event));
 		gettimeofday(&event.time, NULL);
 		event.type = EV_KEY;
-		event.code = keysym2scancode(key); //nomodifiers!
+		event.code = scancode; //nomodifiers!
 		event.value = 0; //key realeased
 		write(ufile, &event, sizeof(event));
 
@@ -504,7 +559,7 @@ static void dokey(rfbBool down,rfbKeySym key,rfbClientPtr cl)
 		event.value = 0;
 		write(ufile, &event, sizeof(event));
 
-
+		down_keys[scancode] = false;
 	}
 }
 
