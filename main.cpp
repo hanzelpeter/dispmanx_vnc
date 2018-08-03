@@ -22,7 +22,7 @@
 #include "DMXResource.hpp"
 #include "DMXDisplay.hpp"
 #include "DMXVNCServer.hpp"
-#define BPP      2
+#include "Logger.hpp"
 
 extern bool terminate;
 
@@ -59,6 +59,8 @@ int main(int argc, char *argv[])
 
 	try
 	{
+		Logger::SetDefaultModule("dmxvnc");
+		
 		if (signal(SIGINT, sig_handler) == SIG_ERR) {
 			throw Exception( "error setting sighandler");
 		}
@@ -69,21 +71,21 @@ int main(int argc, char *argv[])
 		ConfigData configData;
 		GetConfigData(argc, argv, configData);
 
-		std::cerr <<
+		Logger::Get() <<
 			"Running vnc server with the following settings\n"
-			"  frame-rate = " << configData.frameRate << "\n"
-			"  downscale = " << (configData.downscale ? "true" : "false") << "\n"
-			"  fullscreen = " << (configData.fullscreen ? "true" : "false") << "\n"
-			"  localhost = " << (configData.localhost ? "true" : "false") << "\n"
-			"  multi-threaded = " << (configData.multiThreaded ? "true" : "false") << "\n"
-			"  password = " << (configData.password.length() ? "***" : "") << "\n"
-			"  port = " << configData.port << "\n"
-			"  relative = " << (configData.relative ? "true" : "false") << "\n"
-			"  screen = " << configData.screen << "\n"
-			"  unsafe = " << (configData.unsafe ? "true" : "false") << "\n"
-			"  vnc-params = " << configData.vncParams << "\n";
+			"\tframe-rate = " << configData.frameRate << "\n"
+			"\tdownscale = " << (configData.downscale ? "true" : "false") << "\n"
+			"\tfullscreen = " << (configData.fullscreen ? "true" : "false") << "\n"
+			"\tlocalhost = " << (configData.localhost ? "true" : "false") << "\n"
+			"\tmulti-threaded = " << (configData.multiThreaded ? "true" : "false") << "\n"
+			"\tpassword = " << (configData.password.length() ? "***" : "") << "\n"
+			"\tport = " << configData.port << "\n"
+			"\trelative = " << (configData.relative ? "true" : "false") << "\n"
+			"\tscreen = " << configData.screen << "\n"
+			"\tunsafe = " << (configData.unsafe ? "true" : "false") << "\n"
+			"\tvnc-params = " << configData.vncParams;
 
-		DMXVNCServer vncServer(BPP, configData.frameRate);
+		DMXVNCServer vncServer(configData.frameRate);
 		vncServer.Run(configData.port, configData.password, configData.screen,
 									configData.relative, !configData.unsafe, !configData.fullscreen,
 									configData.multiThreaded, configData.downscale,
@@ -233,7 +235,7 @@ bool ReadConfigFile(const char *programName, const std::string& configFile, Conf
 	}
 
 	if (readConfig) {
-		std::cerr << "Read config file: " << configFileTemp << '\n';
+		Logger::Get() << "Read config file: " << configFileTemp;
 
 		config.lookupValue("relative", configData.relative);
 		config.lookupValue("unsafe", configData.unsafe);
@@ -271,7 +273,7 @@ bool TryReadConfigFile(libconfig::Config& config, const std::string& file)
 
 void usage(const char *programName)
 {
-	std::cout << 
+	std::cerr << 
 		"Usage: " << programName << " [OPTION]...\n"
 		"\n"
 		"  -a, --absolute               absolute mouse movements\n"

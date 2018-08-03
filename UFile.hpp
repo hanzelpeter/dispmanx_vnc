@@ -1,5 +1,4 @@
-#ifndef UFILE_HH
-#define UFILE_HH
+#pragma once
 
 #include <linux/input.h>
 #include <linux/uinput.h>
@@ -17,5 +16,3 @@ private:
 	std::string m_name;
 	int m_ufile = -1;
 };
-
-#endif //UFILE_HH

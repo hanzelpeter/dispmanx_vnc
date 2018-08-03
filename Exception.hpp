@@ -1,5 +1,4 @@
-#ifndef EXCEPTION_HH__
-#define EXCEPTION_HH__
+#pragma once
 
 #include <exception>
 #include <string>
@@ -29,5 +28,3 @@ class HelpException : public Exception
 class ParamException : public Exception
 {
 };
-
-#endif // EXCEPTION_HH

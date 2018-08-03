@@ -1,5 +1,4 @@
-#ifndef DMXRESOURCE_HH
-#define DMXRESOURCE_HH
+#pragma once
 
 #include "bcm_host.h"
 
@@ -15,5 +14,3 @@ public:
 private:
 	DISPMANX_RESOURCE_HANDLE_T  m_resource = DISPMANX_NO_HANDLE;
 };
-
-#endif // DMXRESOURCE_HH

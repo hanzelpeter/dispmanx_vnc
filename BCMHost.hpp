@@ -1,5 +1,4 @@
-#ifndef BCMHOST_HH
-#define BCMHOST_HH
+#pragma once
 
 #include "bcm_host.h"
 
@@ -13,5 +12,3 @@ public:
 		bcm_host_deinit();
 	}
 };
-
-#endif // BCMHOST_HH

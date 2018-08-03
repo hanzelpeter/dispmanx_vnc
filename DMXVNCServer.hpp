@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include <chrono>
 #include <wordexp.h>
 
 #include <rfb/rfb.h>
@@ -48,21 +49,58 @@ public:
 	bool largeFrameMode = false;
 };
 
+class FPSCounter
+{
+public:
+	int GetFPS() const
+	{
+		return m_fps;
+	}
+	
+	void Frame()
+	{
+		m_frameCount++;
+		
+		auto now = std::chrono::steady_clock::now();
+		if((now - m_last) >= std::chrono::seconds(1))
+		{
+			m_fps = m_frameCount;
+			m_frameCount = 0;
+			m_last = now;
+		}
+	}
+
+private:
+	std::chrono::steady_clock::time_point m_last{};
+	int m_frameCount{};
+	int m_fps{};
+};
+
+struct Rect
+{
+	int top;
+	int left;
+	int bottom;
+	int right;
+};
+
 class DMXVNCServer
 {
 public:
-	DMXVNCServer(int BPP, int frameRate);
+	DMXVNCServer(int frameRate);
 	~DMXVNCServer();
-	void Open();
-	void Close();
-	bool IsOpen();
 	void Run(int port, const std::string& password,
 				int screen, bool relativeMode, bool safeMode,
 				bool bandwidthMode, bool multiThreaded, bool downscale,
 				bool localhost,
 				const std::string& vncParams);
-	double TimeToTakePicture();
-	int TakePicture(unsigned char *buffer);
+
+private:
+	void Open();
+	void Close();
+	bool IsOpen();
+	std::chrono::steady_clock::duration TimeToTakePicture();
+	bool TakePicture();
 	static void DoPtr(int buttonMask, int x, int y, rfbClientPtr cl);
 	static void DoKey(rfbBool down, rfbKeySym key, rfbClientPtr cl);
 	static enum rfbNewClientAction newclient(rfbClientPtr cl);
@@ -70,56 +108,55 @@ public:
 	static void clientgone(rfbClientPtr cl);
 	void ClientGone(rfbClientPtr cl);
 
-private:
+	const int BPP{2};
+	const VC_IMAGE_TYPE_T imageType{VC_IMAGE_RGB565};
+	
 	BCMHost m_bcmHost;
 	DMXDisplay m_display;
 	DMXResource m_resource;
 	DMXKeyboard m_keyboard;
 	DMXMouse m_mouse;
-	rfbScreenInfoPtr server = nullptr;
-	int BPP = 0;
-	float idlePictureTimeout = 0.5;
-	float targetPictureTimeout = 0.0;
-	float pictureTimeout = 0.0;
-
-	std::string desktopName;
-	const char *passwords[2] = { nullptr, nullptr };
-	std::string password;
-	int clients = 0;
-
-	BandwidthController bandwidthController;
-
-	std::vector<char> frameBuffer;
-	int frameBufferPitch = 0;
-	int frameBufferPaddedWidth = 0;
-
-	ImageMap imageMap;
-	std::vector<char> imageBuffer1;
-	std::vector<char> imageBuffer2;
-	void *image = nullptr;
-	void *back_image = nullptr;
-
-	DISPMANX_MODEINFO_T info = { 0 };
-	bool safeMode = false;
-	bool bandwidthMode = false;
-	bool multiThreaded = false;
-	bool m_downscale = false;
-	bool m_toggleDownscale = false;
-	int screen = 0;
-
-	double timeLastFrameStart = 0.0;
-	double timeLastFrameChange = 0.0;
-	std::string lastPrintedMessage;
-
-	int padded_width = 0;
-	int pitch = 0;
-	int r_x0 = 0;
-	int r_y0 = 0;
-	int r_x1 = 0;
-	int r_y1 = 0;
-
-	VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
-	uint32_t  vc_image_ptr = 0;
+	rfbScreenInfoPtr m_server{};
 	
-	wordexp_t we{};
+	std::chrono::steady_clock::duration m_idlePictureTimeout{std::chrono::milliseconds(500)};
+	std::chrono::steady_clock::duration m_targetPictureTimeout{};
+	std::chrono::steady_clock::duration m_pictureTimeout{};
+	std::chrono::steady_clock::time_point m_timeLastFrameStart{};
+	std::chrono::steady_clock::time_point m_timeLastFrameChange{};
+
+	std::string m_desktopName;
+	const char *m_passwords[2]{};
+	std::string m_password;
+	int m_clientCount{};
+
+	FPSCounter m_fpsCounter;
+	BandwidthController m_bandwidthController;
+
+	std::vector<char> m_frameBuffer;
+	int m_frameBufferPitch{};
+	int m_frameBufferPaddedWidth{};
+
+	ImageMap m_imageMap;
+	std::vector<char> m_imageBuffer1;
+	std::vector<char> m_imageBuffer2;
+	void *m_image{};
+	void *m_back_image{};
+
+	DISPMANX_MODEINFO_T m_modeInfo{};
+	bool m_safeMode{false};
+	bool m_bandwidthMode{false};
+	bool m_multiThreaded{false};
+	bool m_downscale{false};
+	bool m_toggleDownscale{false};
+	int m_screen{0};
+
+	std::string m_lastPrintedMessage;
+
+	int m_padded_width{};
+	int m_pitch{};
+	Rect m_frameRect{};
+
+	uint32_t  m_vc_image_ptr{};
+	
+	wordexp_t m_we{};
 };

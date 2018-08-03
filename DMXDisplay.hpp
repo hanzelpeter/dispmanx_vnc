@@ -1,5 +1,4 @@
-#ifndef DMXDISPLAY_HH
-#define DMXDISPLAY_HH
+#pragma once
 
 #include "bcm_host.h"
 
@@ -18,5 +17,3 @@ public:
 private:
 	DISPMANX_DISPLAY_HANDLE_T m_display = DISPMANX_NO_HANDLE;
 };
-
-#endif // DMXDISPLAY_HH

@@ -1,8 +1,9 @@
 #include "DMXDisplay.hpp"
 
-#include <stdio.h>
-
 #include "Exception.hpp"
+#include "Logger.hpp"
+
+#include <stdio.h>
 
 DMXDisplay::~DMXDisplay()
 {
@@ -11,7 +12,7 @@ DMXDisplay::~DMXDisplay()
 
 void DMXDisplay::Open(int screen)
 {
-	printf("Open display[%i]...\n", screen);
+	Logger::Get() << "Open display[" << screen << "]...";
 	m_display = vc_dispmanx_display_open(screen);
 	if (m_display == DISPMANX_NO_HANDLE)
 		throw Exception("vc_dispmanx_display_open failed");

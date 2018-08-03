@@ -11,7 +11,8 @@ SOURCES = main.cpp \
 		DMXDisplay.cpp \
 		DMXKeyboard.cpp \
 		DMXMouse.cpp \
-		DMXVNCServer.cpp
+		DMXVNCServer.cpp \
+		Logger.cpp
 
 OBJS = $(SOURCES:.cpp=.o)
 

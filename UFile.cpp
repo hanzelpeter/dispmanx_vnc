@@ -1,6 +1,7 @@
 #include "UFile.hpp"
 
 #include "Exception.hpp"
+#include "Logger.hpp"
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -18,9 +19,9 @@ UFile::~UFile()
 void UFile::Open(bool relativeMode, int width, int height)
 {
 	m_ufile = open("/dev/uinput", O_WRONLY | O_NDELAY);
-	printf("open /dev/uinput returned %d.\n", m_ufile);
+	Logger::Get() << "open /dev/uinput returned " << m_ufile;
 	if (m_ufile == 0) {
-		throw Exception("Could not open uinput.\n");
+		throw Exception("Could not open uinput");
 	}
 
 	struct uinput_user_dev uinp{};
@@ -71,12 +72,12 @@ void UFile::Open(bool relativeMode, int width, int height)
 
 	int retcode;
 	retcode = write(m_ufile, &uinp, sizeof(uinp));
-	printf("First write returned %d.\n", retcode);
+	Logger::Get() << "First write returned " << retcode;
 
 	retcode = ioctl(m_ufile, UI_DEV_CREATE);
-	printf("ioctl UI_DEV_CREATE returned %d.\n", retcode);
+	Logger::Get() << "ioctl UI_DEV_CREATE returned " << retcode;
 	if (retcode) {
-		throw Exception("Error create uinput device %d.\n");
+		throw Exception("Error creating uinput device: " + std::to_string(retcode));
 	}
 }
 
@@ -99,6 +100,6 @@ void UFile::WriteEvent(__u16 type, __u16 code, __s32 value)
 	inputEvent.value = value;
 	if(-1 == write(m_ufile, &inputEvent, sizeof(inputEvent)))
 	{
-		std::cout << "Error " << errno << " writing to " << m_name << '\n';
+		Logger::Get() << "Error " << errno << " writing to " << m_name;
 	}
 };
