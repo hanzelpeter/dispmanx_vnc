@@ -96,11 +96,11 @@ int main(int argc, char *argv[])
 		usage(argv[0]);
 	}
 	catch (ParamException) {
-		std::cerr << "Try '" << argv[0] << "' --help for more information.\n";
+		Logger::Get() << "Try '" << argv[0] << "' --help for more information";
 		ret = EXIT_FAILURE;
 	}
 	catch (Exception& e) {
-		std::cerr << "Exception: " << e.what() << "\n";
+		Logger::Get() << "Exception: " << e.what();
 		ret = EXIT_FAILURE;
 	}
 
@@ -202,7 +202,7 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 	}
 
 	if (optind < argc) {
-		std::cerr << "Unknown parameter: " << argv[optind] << '\n';
+		Logger::Get() << "Unknown parameter: " << argv[optind];
 		throw ParamException();
 	}
 }
@@ -228,7 +228,7 @@ bool ReadConfigFile(const char *programName, const std::string& configFile, Conf
 			configFileTemp = "/etc/";
 			configFileTemp += baseName;
 			configFileTemp += ".conf";
-			std::cerr << "trying: " << configFileTemp << '\n';
+			Logger::Get() << "Trying to read configuration file: " << configFileTemp;
 			//configFileTemp = "/etc/dispmanx_vncserver.conf";
 			readConfig = TryReadConfigFile(config, configFileTemp);
 		}
@@ -250,7 +250,7 @@ bool ReadConfigFile(const char *programName, const std::string& configFile, Conf
 		config.lookupValue("vnc-params", configData.vncParams);
 	}
 	else
-		std::cerr << "No config file found\n";
+		Logger::Get() << "No config file found";
 
 	return readConfig;
 }

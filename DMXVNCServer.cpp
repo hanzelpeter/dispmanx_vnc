@@ -280,7 +280,7 @@ void DMXVNCServer::Run(int port, const std::string& password,
 				errors = 0;
 			}
 			catch (Exception& e) {
-				std::cerr << "Caught exception: " << e.what() << "\n";
+				Logger::Get() << "Caught exception: " << e.what();
 				errors++;
 				if (errors > 10)
 					throw e;
