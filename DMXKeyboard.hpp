@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UFile.hh"
+#include "UFile.hpp"
 
 #include <rfb/rfb.h>
 

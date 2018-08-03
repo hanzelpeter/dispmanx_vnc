@@ -1,6 +1,6 @@
-#include "UFile.hh"
+#include "UFile.hpp"
 
-#include "Exception.hh"
+#include "Exception.hpp"
 
 #include <stdio.h>
 #include <sys/types.h>

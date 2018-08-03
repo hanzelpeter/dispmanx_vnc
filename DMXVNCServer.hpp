@@ -9,12 +9,12 @@
 
 #include <rfb/rfb.h>
 
-#include "BCMHost.hh"
-#include "DMXDisplay.hh"
-#include "DMXKeyboard.hh"
-#include "DMXMouse.hh"
-#include "DMXResource.hh"
-#include "UFile.hh"
+#include "BCMHost.hpp"
+#include "DMXDisplay.hpp"
+#include "DMXKeyboard.hpp"
+#include "DMXMouse.hpp"
+#include "DMXResource.hpp"
+#include "UFile.hpp"
 
 class ImageMap
 {

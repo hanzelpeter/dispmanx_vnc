@@ -17,11 +17,11 @@
 
 #include <libconfig.h++>
 
-#include "Exception.hh"
-#include "UFile.hh"
-#include "DMXResource.hh"
-#include "DMXDisplay.hh"
-#include "DMXVNCServer.hh"
+#include "Exception.hpp"
+#include "UFile.hpp"
+#include "DMXResource.hpp"
+#include "DMXDisplay.hpp"
+#include "DMXVNCServer.hpp"
 #define BPP      2
 
 extern bool terminate;

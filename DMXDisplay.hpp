@@ -3,7 +3,7 @@
 
 #include "bcm_host.h"
 
-#include "DMXResource.hh"
+#include "DMXResource.hpp"
 
 class DMXDisplay
 {

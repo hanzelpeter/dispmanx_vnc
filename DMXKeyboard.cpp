@@ -1,4 +1,4 @@
-#include "DMXKeyboard.hh"
+#include "DMXKeyboard.hpp"
 
 #include <rfb/keysym.h>
 

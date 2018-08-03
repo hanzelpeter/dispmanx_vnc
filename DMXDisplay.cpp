@@ -1,8 +1,8 @@
-#include "DMXDisplay.hh"
+#include "DMXDisplay.hpp"
 
 #include <stdio.h>
 
-#include "Exception.hh"
+#include "Exception.hpp"
 
 DMXDisplay::~DMXDisplay()
 {

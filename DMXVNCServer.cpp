@@ -1,6 +1,6 @@
-#include "DMXVNCServer.hh"
+#include "DMXVNCServer.hpp"
 
-#include "Exception.hh"
+#include "Exception.hpp"
 
 #undef max
 

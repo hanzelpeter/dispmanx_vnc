@@ -1,5 +1,5 @@
-#include "DMXResource.hh"
-#include "Exception.hh"
+#include "DMXResource.hpp"
+#include "Exception.hpp"
 
 DMXResource::~DMXResource()
 {

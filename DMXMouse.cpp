@@ -1,4 +1,4 @@
-#include "DMXMouse.hh"
+#include "DMXMouse.hpp"
 
 void DMXMouse::DoPtr(int buttonMask, int x, int y)
 {
