@@ -30,9 +30,19 @@ public:
 		auto tmb = std::chrono::system_clock::to_time_t(now);
 		auto bt = *std::localtime(&tmb);
 		
+#if defined(__GNUC__) && __GNUC__ < 5
+		{
+			char timeBuff[100];
+			std::strftime(timeBuff, sizeof(timeBuff), "%F %X", &bt);
+			std::cerr << timeBuff << "." << std::setfill('0') << std::setw(3) << ms.count() << std::setw(0)
+				<< " [" << (m_module.empty() ? m_defaultModule : m_module) << "] "
+				<< m_stream.str() << std::endl;
+		}
+#else
 		std::cerr << std::put_time(&bt, "%F %X") << "." << std::setfill('0') << std::setw(3) << ms.count() << std::setw(0)
 			<< " [" << (m_module.empty() ? m_defaultModule : m_module) << "] "
 			<< m_stream.str() << std::endl;
+#endif
 	}
 
 	template <typename T>

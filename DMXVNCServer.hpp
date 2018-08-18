@@ -9,6 +9,8 @@
 #include <wordexp.h>
 
 #include <rfb/rfb.h>
+#undef min
+#undef max
 
 #include "BCMHost.hpp"
 #include "DMXDisplay.hpp"
