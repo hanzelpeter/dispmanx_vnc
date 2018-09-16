@@ -22,3 +22,12 @@ Without arguments it uses absolute mode for mouse
 
 Relative mode makes hello_triangle2 to work. And also mouse moving in minecraft is better.
 Still the mouse is tricky.
+
+### Usage
+dispmanx_vnc uses libvncserver-dev, so it takes all the arguments vncserver does.  See "./dispmanx_vnc -help" for possible options.
+You may already have a vncserver running; In which case use dispmanx_vnc with another port than the default 5900. For example:
+sudo ./dispmanx_vnc rfbport 5901
+
+
+### Possible Errors
+If you see the message, "open /dev/uinput returned -1." it is because you are trying to run dispmanx without being root.
