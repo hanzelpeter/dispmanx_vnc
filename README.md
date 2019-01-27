@@ -12,7 +12,7 @@ VNC Server for Raspberry Pi using dispmanx
 Compile with ./makeit or use make
 
 ### Packages
-* ![logo](https://s19.postimg.org/b2hf0wbar/64x64.png "arch logo")Arch ARM: in the [AUR](https://aur.archlinux.org/packages/dispmanx_vnc).
+* ![logo](http://www.monitorix.org/imgs/archlinux.png "arch logo")Arch ARM: in the [AUR](https://aur.archlinux.org/packages/dispmanx_vnc).
 
 ### Notes
 If you want to use X, modprobe evdev first.
