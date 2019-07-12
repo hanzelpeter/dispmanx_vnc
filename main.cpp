@@ -92,10 +92,10 @@ int main(int argc, char *argv[])
 									configData.localhost,
 									configData.vncParams);
 	}
-	catch (HelpException) {
+	catch (HelpException&) {
 		usage(argv[0]);
 	}
-	catch (ParamException) {
+	catch (ParamException&) {
 		Logger::Get() << "Try '" << argv[0] << "' --help for more information";
 		ret = EXIT_FAILURE;
 	}
@@ -261,7 +261,7 @@ bool TryReadConfigFile(libconfig::Config& config, const std::string& file)
 		config.readFile(file.c_str());
 		return true;
 	}
-	catch (libconfig::FileIOException) {
+	catch (libconfig::FileIOException&) {
 		return false;;
 	}
 	catch (libconfig::ParseException &e) {

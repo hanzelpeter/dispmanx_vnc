@@ -68,7 +68,7 @@ void UFile::Open(bool relativeMode, int width, int height)
 		}
 	}
 
-	strncpy(uinp.name, m_name.c_str(), UINPUT_MAX_NAME_SIZE);
+	strncpy(uinp.name, m_name.c_str(), UINPUT_MAX_NAME_SIZE - 1);
 
 	int retcode;
 	retcode = write(m_ufile, &uinp, sizeof(uinp));
