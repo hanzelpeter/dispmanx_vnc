@@ -19,11 +19,11 @@ If you want to use X, modprobe evdev first.\
 Use -r for relative mode\
 Use -a for absolute mode\
 Use -d X for dispmanx ID (default is 0)\
-            according some docs:\
-            0 - DSI/DPI LCD (I use 0 for headless RPI and also 3 works)\
-            2 - HDMI 0\
-            3 - SDTV\
-            7 - HDMI 1\
+&nbsp;&nbsp;&nbsp;&nbsp;according some docs:\
+&nbsp;&nbsp;&nbsp;&nbsp;0 - DSI/DPI LCD (I use 0 for headless RPI and also 3 works)\
+&nbsp;&nbsp;&nbsp;&nbsp;2 - HDMI 0\
+&nbsp;&nbsp;&nbsp;&nbsp;3 - SDTV\
+&nbsp;&nbsp;&nbsp;&nbsp;7 - HDMI 1\
 Without arguments it displays help
 
 Relative mode makes hello_triangle2 to work. And also mouse moving in minecraft is better.
