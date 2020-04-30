@@ -563,6 +563,21 @@ static void dokey(rfbBool down,rfbKeySym key,rfbClientPtr cl)
 	}
 }
 
+void usage() {
+	printf("Usage: sudo ./dispmanx_vnc\n");
+	printf("       -h for help\n");
+	printf("       -a for mouse absolute mode\n");
+	printf("       -r for mouse relative mode\n");
+	printf("       -d X for dispmanx display ID\n");
+	printf("            according some docs:\n");
+	printf("            0 - DSI/DPI LCD (I use 0 for headless RPI and also 3 works)\n");
+	printf("            2 - HDMI 0\n");
+	printf("            3 - SDTV\n");
+	printf("            7 - HDMI 1\n");
+	exit(0);
+}
+
+
 int main(int argc, char *argv[])
 {
 	VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
@@ -574,11 +589,21 @@ int main(int argc, char *argv[])
 
 	uint32_t        screen = 0;
 
+	if (argc == 1) {
+		usage();
+	}
+
 	for (x=1; x<argc; x++) {
 		if (strcmp(argv[x], "-r")==0)
 			relative_mode = 1;
 		if (strcmp(argv[x], "-a")==0)
 			relative_mode = 0;
+		if (strcmp(argv[x], "-h")==0)
+			usage();
+		if (strcmp(argv[x], "-d")==0) {
+			if (argc > x+1)
+				screen = atoi(argv[x+1]);
+		}
 	}
 
 	if (signal(SIGINT, sig_handler) == SIG_ERR) {
