@@ -15,15 +15,15 @@ Compile with ./makeit or use make
 * ![logo](http://www.monitorix.org/imgs/archlinux.png "arch logo")Arch ARM: in the [AUR](https://aur.archlinux.org/packages/dispmanx_vnc).
 
 ### Notes
-If you want to use X, modprobe evdev first.
-Use -r for relative mode
-Use -a for absolute mode
-Use -d X for dispmanx ID (default is 0)
-            according some docs:
-            0 - DSI/DPI LCD (I use 0 for headless RPI and also 3 works)
-            2 - HDMI 0
-            3 - SDTV
-            7 - HDMI 1
+If you want to use X, modprobe evdev first.\
+Use -r for relative mode\
+Use -a for absolute mode\
+Use -d X for dispmanx ID (default is 0)\
+            according some docs:\
+            0 - DSI/DPI LCD (I use 0 for headless RPI and also 3 works)\
+            2 - HDMI 0\
+            3 - SDTV\
+            7 - HDMI 1\
 Without arguments it displays help
 
 Relative mode makes hello_triangle2 to work. And also mouse moving in minecraft is better.
