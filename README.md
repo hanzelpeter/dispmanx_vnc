@@ -24,7 +24,7 @@ Use -d X for dispmanx ID (default is 0)\
 &nbsp;&nbsp;&nbsp;&nbsp;2 - HDMI 0\
 &nbsp;&nbsp;&nbsp;&nbsp;3 - SDTV\
 &nbsp;&nbsp;&nbsp;&nbsp;7 - HDMI 1\
-Without arguments it displays help
+Without arguments it starts with display ID = 0 with absolute mouse mode
 
 Relative mode makes hello_triangle2 to work. And also mouse moving in minecraft is better.
 Still the mouse is tricky.
