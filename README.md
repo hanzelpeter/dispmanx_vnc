@@ -16,8 +16,8 @@ Compile with ./makeit or use make
 
 ### Notes
 If you want to use X, modprobe evdev first.\
-Use -h for this small help
-Use -help for VNC server options help
+Use -h for this small help\
+Use -help for VNC server options help\
 Use -r for relative mode\
 Use -a for absolute mode\
 Use -d X for dispmanx ID (default is 0)\
