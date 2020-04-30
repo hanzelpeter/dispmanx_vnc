@@ -589,10 +589,6 @@ int main(int argc, char *argv[])
 
 	uint32_t        screen = 0;
 
-	if (argc == 1) {
-		usage();
-	}
-
 	for (x=1; x<argc; x++) {
 		if (strcmp(argv[x], "-r")==0)
 			relative_mode = 1;
