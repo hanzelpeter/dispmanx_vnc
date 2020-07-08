@@ -344,9 +344,9 @@ bool DMXVNCServer::TakePicture()
 	vc_dispmanx_rect_set(&rect, 0, 0, m_modeInfo.width, m_modeInfo.height);
 	m_resource.ReadData(rect, m_image, m_pitch);
 
-	unsigned long *image_lp = (unsigned long *)m_image;
-	unsigned long *buffer_lp = (unsigned long *)m_server->frameBuffer;
-	unsigned long *back_image_lp = (unsigned long*)m_back_image;
+	uint32_t* image_lp = (uint32_t*)m_image;
+	uint32_t* buffer_lp = (uint32_t*)m_server->frameBuffer;
+	uint32_t* back_image_lp = (uint32_t*)m_back_image;
 
 	int lp_padding = m_padded_width >> 1;
 
@@ -378,8 +378,8 @@ bool DMXVNCServer::TakePicture()
 					}
 
 					{
-						unsigned long tbi1 = image_lp[y * lp_padding + x];
-						unsigned long tbi2 = image_lp[(y + 1) * lp_padding + x];
+						uint32_t tbi1 = image_lp[y * lp_padding + x];
+						uint32_t tbi2 = image_lp[(y + 1) * lp_padding + x];
 
 						uint16_t r1, r2, r3;
 						r1 = ((tbi1 & 0b0000000000011111) +
@@ -435,7 +435,7 @@ bool DMXVNCServer::TakePicture()
 						if (x > m_frameRect.right) m_frameRect.right = x;
 					}
 
-					unsigned long tbi = image_lp[y * lp_padding + x];
+					uint32_t tbi = image_lp[y * lp_padding + x];
 					buffer_lp[y * lp_padding + x] =
 						((tbi & 0b11111) << 10) |
 						((tbi & 0b11111000000) >> 1) |
@@ -494,7 +494,7 @@ bool DMXVNCServer::TakePicture()
 			}
 
 			std::transform(image_lp + (m_frameRect.top * lp_padding), image_lp + (m_frameRect.bottom * lp_padding - 1), buffer_lp + (m_frameRect.top * lp_padding),
-				[](unsigned long tbi){
+				[](uint32_t tbi){
 				return
 					((tbi & 0b11111) << 10) |
 					((tbi & 0b11111000000) >> 1) |
@@ -512,7 +512,7 @@ bool DMXVNCServer::TakePicture()
 	std::swap(m_back_image, m_image);
 
 	m_fpsCounter.Frame();
-	
+
 	char printbuffer[80];
 	sprintf(printbuffer, "Picture (%03d fps) left=%d, top=%d, right=%d, bottom=%d              \r",
 		m_fpsCounter.GetFPS(), m_frameRect.left, m_frameRect.top, m_frameRect.right, m_frameRect.bottom);
