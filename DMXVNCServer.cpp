@@ -111,6 +111,7 @@ void DMXVNCServer::Run(int port, const std::string& password,
 						bool bandwidthMode, bool multiThreaded, bool downscale,
 						bool localhost,
 						bool inetd,
+						bool once,
 						const std::string& vncParams)
 {
 	m_safeMode = safeMode;
@@ -118,6 +119,7 @@ void DMXVNCServer::Run(int port, const std::string& password,
 	m_screen = screen;
 	m_multiThreaded = multiThreaded;
 	m_downscale = downscale;
+	connect_once = once;
 
 	Open();
 
@@ -572,6 +574,15 @@ void DMXVNCServer::clientgone(rfbClientPtr cl)
 void DMXVNCServer::ClientGone(rfbClientPtr cl)
 {
 	m_clientCount--;
+	if(connect_once){
+		if(m_clientCount > 0){
+			Logger::Get() << m_clientCount << " other client" << ((m_clientCount > 1) ? "s" :"") <<	" still running";
+		}
+		else {
+			Logger::Get() << "Last client exited, terminating";
+			terminate = true;
+		}
+	}
 }
 
 void ImageMap::Resize(int height, int width)
