@@ -518,7 +518,7 @@ bool DMXVNCServer::TakePicture()
 		m_fpsCounter.GetFPS(), m_frameRect.left, m_frameRect.top, m_frameRect.right, m_frameRect.bottom);
 
 	if (m_lastPrintedMessage != printbuffer) {
-		std::cerr << printbuffer;
+		std::cout << printbuffer;
 		m_lastPrintedMessage = printbuffer;
 	}
 
