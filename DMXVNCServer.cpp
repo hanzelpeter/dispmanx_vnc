@@ -110,6 +110,7 @@ void DMXVNCServer::Run(int port, const std::string& password,
 						int screen, bool relativeMode, bool safeMode,
 						bool bandwidthMode, bool multiThreaded, bool downscale,
 						bool localhost,
+						bool inetd,
 						const std::string& vncParams)
 {
 	m_safeMode = safeMode;
@@ -143,6 +144,11 @@ void DMXVNCServer::Run(int port, const std::string& password,
 		m_server->port = port;
 	}
 	
+  if (inetd){
+		m_server->inetdSock= 0;
+		m_server->port = 0;
+  }
+
 	if(localhost) {
 		m_server->listen6Interface = localhost_address;
 		rfbStringToAddr(localhost_address, &m_server->listenInterface);

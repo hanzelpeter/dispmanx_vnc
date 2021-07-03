@@ -95,6 +95,7 @@ public:
 				int screen, bool relativeMode, bool safeMode,
 				bool bandwidthMode, bool multiThreaded, bool downscale,
 				bool localhost,
+				bool inetd,
 				const std::string& vncParams);
 
 private:
