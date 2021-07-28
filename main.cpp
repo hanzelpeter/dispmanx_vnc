@@ -37,6 +37,8 @@ struct ConfigData
 	bool fullscreen = false;
 	bool multiThreaded = false;
 	bool localhost = false;
+	bool inetd = false;
+	bool once = false;
 	int frameRate = 15;
 	std::string configFile;
 	std::string vncParams;
@@ -77,7 +79,9 @@ int main(int argc, char *argv[])
 			"\tdownscale = " << (configData.downscale ? "true" : "false") << "\n"
 			"\tfullscreen = " << (configData.fullscreen ? "true" : "false") << "\n"
 			"\tlocalhost = " << (configData.localhost ? "true" : "false") << "\n"
+			"\tinetd = " << (configData.inetd ? "true" : "false") << "\n"
 			"\tmulti-threaded = " << (configData.multiThreaded ? "true" : "false") << "\n"
+			"\tonce = " << (configData.once ? "true" : "false") << "\n"
 			"\tpassword = " << (configData.password.length() ? "***" : "") << "\n"
 			"\tport = " << configData.port << "\n"
 			"\trelative = " << (configData.relative ? "true" : "false") << "\n"
@@ -90,6 +94,8 @@ int main(int argc, char *argv[])
 									configData.relative, !configData.unsafe, !configData.fullscreen,
 									configData.multiThreaded, configData.downscale,
 									configData.localhost,
+									configData.inetd,
+									configData.once,
 									configData.vncParams);
 	}
 	catch (HelpException&) {
@@ -127,7 +133,9 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 		{ "unsafe", no_argument, nullptr, 'u' },
 		{ "fullscreen", no_argument, nullptr, 'f' },
 		{ "localhost", no_argument, nullptr, 'l' },
+		{ "inetd", no_argument, nullptr, 'i' },
 		{ "multi-threaded", no_argument, nullptr, 'm' },
+		{ "once", no_argument, nullptr, 'o' },
 		{ "password", required_argument, nullptr, 'P' },
 		{ "port", required_argument, nullptr, 'p' },
 		{ "screen", required_argument, nullptr, 's' },
@@ -139,7 +147,7 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 
 	int c;
 	optind = 1;
-	while (-1 != (c = getopt_long(argc, argv, "abc:dflmP:p:rs:t:uv:", long_options, nullptr))) {
+	while (-1 != (c = getopt_long(argc, argv, "abc:dfilmP:op:rs:t:uv:", long_options, nullptr))) {
 		switch (c) {
 		case 'a':
 			configData.relative = false;
@@ -169,8 +177,16 @@ void GetCommandLineConfigData(int argc, char *argv[], ConfigData& configData)
 			configData.localhost = true;
 			break;
 
+		case 'i':
+			configData.inetd = true;
+			break;
+
 		case 'm':
 			configData.multiThreaded = true;
+			break;
+
+		case 'o':
+			configData.once = true;
 			break;
 
 		case 'P':
@@ -242,7 +258,9 @@ bool ReadConfigFile(const char *programName, const std::string& configFile, Conf
 		config.lookupValue("downscale", configData.downscale);
 		config.lookupValue("fullscreen", configData.fullscreen);
 		config.lookupValue("localhost", configData.localhost);
+		config.lookupValue("inetd", configData.inetd);
 		config.lookupValue("multi-threaded", configData.multiThreaded);
+		config.lookupValue("once", configData.once);
 		config.lookupValue("password", configData.password);
 		config.lookupValue("port", configData.port);
 		config.lookupValue("screen", configData.screen);
@@ -280,8 +298,10 @@ void usage(const char *programName)
 		"  -c, --config-file=FILE       use the specified configuration file\n"
 		"  -d, --downscale              downscales the screen to a quarter in vnc\n"
 		"  -f, --fullscreen             always runs fullscreen mode\n"
+		"  -i, --inetd                  stdio instead of listening socket\n"
 		"  -l, --localhost              only listens to local ports\n"
 		"  -m, --multi-threaded         runs vnc in a separate thread\n"
+		"  -o, --once                   connect once, then terminate\n"
 		"  -p, --port=PORT              makes vnc available on the speficied port\n"
 		"  -P, --password=PASSWORD      protects the session with PASSWORD\n"
 		"  -r, --relative               relative mouse movements\n"

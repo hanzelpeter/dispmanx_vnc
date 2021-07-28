@@ -8,4 +8,5 @@ password = "";
 frame-rate = 15;
 downscale = false;
 localhost = false;
+inetd = false;
 vnc-params = "";

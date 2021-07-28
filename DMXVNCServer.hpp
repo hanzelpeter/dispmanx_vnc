@@ -95,6 +95,8 @@ public:
 				int screen, bool relativeMode, bool safeMode,
 				bool bandwidthMode, bool multiThreaded, bool downscale,
 				bool localhost,
+				bool inetd,
+				bool once,
 				const std::string& vncParams);
 
 private:
@@ -109,6 +111,7 @@ private:
 	enum rfbNewClientAction NewClient(rfbClientPtr cl);
 	static void clientgone(rfbClientPtr cl);
 	void ClientGone(rfbClientPtr cl);
+	bool connect_once;
 
 	const int BPP{2};
 	const VC_IMAGE_TYPE_T imageType{VC_IMAGE_RGB565};

@@ -110,6 +110,8 @@ void DMXVNCServer::Run(int port, const std::string& password,
 						int screen, bool relativeMode, bool safeMode,
 						bool bandwidthMode, bool multiThreaded, bool downscale,
 						bool localhost,
+						bool inetd,
+						bool once,
 						const std::string& vncParams)
 {
 	m_safeMode = safeMode;
@@ -117,6 +119,7 @@ void DMXVNCServer::Run(int port, const std::string& password,
 	m_screen = screen;
 	m_multiThreaded = multiThreaded;
 	m_downscale = downscale;
+	connect_once = once;
 
 	Open();
 
@@ -143,6 +146,11 @@ void DMXVNCServer::Run(int port, const std::string& password,
 		m_server->port = port;
 	}
 	
+  if (inetd){
+		m_server->inetdSock= 0;
+		m_server->port = 0;
+  }
+
 	if(localhost) {
 		m_server->listen6Interface = localhost_address;
 		rfbStringToAddr(localhost_address, &m_server->listenInterface);
@@ -518,7 +526,7 @@ bool DMXVNCServer::TakePicture()
 		m_fpsCounter.GetFPS(), m_frameRect.left, m_frameRect.top, m_frameRect.right, m_frameRect.bottom);
 
 	if (m_lastPrintedMessage != printbuffer) {
-		std::cerr << printbuffer;
+		std::cout << printbuffer;
 		m_lastPrintedMessage = printbuffer;
 	}
 
@@ -566,6 +574,15 @@ void DMXVNCServer::clientgone(rfbClientPtr cl)
 void DMXVNCServer::ClientGone(rfbClientPtr cl)
 {
 	m_clientCount--;
+	if(connect_once){
+		if(m_clientCount > 0){
+			Logger::Get() << m_clientCount << " other client" << ((m_clientCount > 1) ? "s" :"") <<	" still running";
+		}
+		else {
+			Logger::Get() << "Last client exited, terminating";
+			terminate = true;
+		}
+	}
 }
 
 void ImageMap::Resize(int height, int width)
