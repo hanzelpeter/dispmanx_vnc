@@ -1,0 +1,448 @@
+dispmanx-vnc (0.0~git20212807.cb139ba) unstable; urgency=medium
+
+  * Updated README.md with new options
+
+ --  <twojstaryzdomu@github.com>  Wed, 28 Jul 2021 14:55:58 +0200
+
+dispmanx-vnc (0.0~git20212807.9830e2c) unstable; urgency=medium
+
+  * Merge pull request 24 from twojstaryzdomu master
+
+ --  <patrik.olausson@gmail.com>  Wed, 28 Jul 2021 12:37:51 +0200
+
+dispmanx-vnc (0.0~git20210307.d098a32) unstable; urgency=medium
+
+  * Added connect once exit mode
+
+ --  <twojstaryzdomu@github.com>  Sat, 3 Jul 2021 19:28:35 +0200
+
+dispmanx-vnc (0.0~git20210307.cd87b08) unstable; urgency=medium
+
+  * Added inetd support
+
+ --  <twojstaryzdomu@github.com>  Sat, 3 Jul 2021 18:49:09 +0200
+
+dispmanx-vnc (0.0~git20210307.c518750) unstable; urgency=medium
+
+  * Redirect server frame stats to standard output
+
+ --  <twojstaryzdomu@github.com>  Sat, 3 Jul 2021 18:47:45 +0200
+
+dispmanx-vnc (0.0~git20200807.d0979cf) unstable; urgency=medium
+
+  * Fixed segmentation fault for 64 bit builds. Now works on Raspberry
+    Pi OS 64 bit beta
+
+ --  <patrik.olausson@gmail.com>  Wed, 8 Jul 2020 11:42:49 +0200
+
+dispmanx-vnc (0.0~git20191207.756641e) unstable; urgency=medium
+
+  * Removed warnings
+
+ --  <patrik.olausson@gmail.com>  Fri, 12 Jul 2019 10:49:59 +0200
+
+dispmanx-vnc (0.0~git20181808.5bde54b) unstable; urgency=medium
+
+  * Fix compilation errors on gcc 4
+
+ --  <patrik.olausson@gmail.com>  Sat, 18 Aug 2018 10:32:28 +0200
+
+dispmanx-vnc (0.0~git20180308.f674807) unstable; urgency=medium
+
+  * Using the logger a few more places
+
+ --  <patrik.olausson@gmail.com>  Fri, 3 Aug 2018 19:06:28 +0200
+
+dispmanx-vnc (0.0~git20180308.f09d01b) unstable; urgency=medium
+
+  * Fixed a bug where the process would occasionally not stop if a
+    session was active
+
+ --  <patrik.olausson@gmail.com>  Fri, 3 Aug 2018 18:48:25 +0200
+
+dispmanx-vnc (0.0~git20180308.8df6c17) unstable; urgency=medium
+
+  * Renamed the header files
+
+ --  <patrik.olausson@gmail.com>  Fri, 3 Aug 2018 18:20:45 +0200
+
+dispmanx-vnc (0.0~git20173007.77b33a6) unstable; urgency=medium
+
+  * Merge branch master of https github.com patrikolausson dispmanx_vnc
+
+ --  <patrik.olausson@gmail.com>  Sun, 30 Jul 2017 12:36:33 +0200
+
+dispmanx-vnc (0.0~git20173007.c8222a3) unstable; urgency=medium
+
+  * Some non functional restructuring. Moved keyboard and mouse handling
+    to separate classes
+
+ --  <patrik.olausson@gmail.com>  Sun, 30 Jul 2017 12:34:29 +0200
+
+dispmanx-vnc (0.0~git20173007.560d392) unstable; urgency=medium
+
+  * Added missing initialization of downKeys possibly fixing minor
+    problem with handling of repeated keys
+
+ --  <patrik.olausson@gmail.com>  Sun, 30 Jul 2017 11:41:33 +0200
+
+dispmanx-vnc (0.0~git20173007.a78e7f2) unstable; urgency=medium
+
+  * Added support for the menu key
+
+ --  <patrik.olausson@gmail.com>  Sun, 30 Jul 2017 11:16:58 +0200
+
+dispmanx-vnc (0.0~git20172907.7e79023) unstable; urgency=medium
+
+  * Merge pull request 7 from mickael9 key repeat
+
+ --  <patrik.olausson@gmail.com>  Sat, 29 Jul 2017 12:20:39 +0200
+
+dispmanx-vnc (0.0~git20172907.3218a90) unstable; urgency=medium
+
+  * Merge pull request 8 from mickael9 keypad
+
+ --  <patrik.olausson@gmail.com>  Sat, 29 Jul 2017 12:20:24 +0200
+
+dispmanx-vnc (0.0~git20171807.f353430) unstable; urgency=medium
+
+  * Add suport for keypad keys
+
+ --  <mickael9@gmail.com>  Tue, 18 Jul 2017 20:51:52 +0200
+
+dispmanx-vnc (0.0~git20171807.0b5906e) unstable; urgency=medium
+
+  * Add support for repeated keys
+
+ --  <mickael9@gmail.com>  Tue, 18 Jul 2017 20:42:37 +0200
+
+dispmanx-vnc (0.0~git20172101.a6d288a) unstable; urgency=medium
+
+  * Split mouse and keyboard into separate devices to allow newer
+    versions of Xorg to detect them as standard keyboard and mouse
+
+ --  <patrik.olausson@gmail.com>  Sat, 21 Jan 2017 16:15:03 +0100
+
+dispmanx-vnc (0.0~git20170501.30e68c7) unstable; urgency=medium
+
+  * Update README.md
+
+ --  <patrik.olausson@gmail.com>  Thu, 5 Jan 2017 16:58:49 +0100
+
+dispmanx-vnc (0.0~git20170501.b933f03) unstable; urgency=medium
+
+  * Implemented options to only listen on localhost and to specify
+    parameters for libvncserver
+
+ --  <patrik.olausson@gmail.com>  Thu, 5 Jan 2017 16:50:21 +0100
+
+dispmanx-vnc (0.0~git20150912.78e6673) unstable; urgency=medium
+
+  * Update README.md
+
+ --  <patrik.olausson@gmail.com>  Wed, 9 Dec 2015 23:41:34 +0100
+
+dispmanx-vnc (0.0~git20152211.fbc1b1c) unstable; urgency=medium
+
+  * Update README.md
+
+ --  <patrik.olausson@gmail.com>  Sun, 22 Nov 2015 16:44:03 +0100
+
+dispmanx-vnc (0.0~git20150807.65dd4ca) unstable; urgency=medium
+
+  * Update Makefile
+
+ --  <patrik.olausson@gmail.com>  Wed, 8 Jul 2015 22:27:51 +0200
+
+dispmanx-vnc (0.0~git20150807.c3b3b3a) unstable; urgency=medium
+
+  * Update README.md
+
+ --  <patrik.olausson@gmail.com>  Wed, 8 Jul 2015 22:27:05 +0200
+
+dispmanx-vnc (0.0~git20150807.bc700a6) unstable; urgency=medium
+
+  * Update README.md
+
+ --  <patrik.olausson@gmail.com>  Wed, 8 Jul 2015 21:37:03 +0200
+
+dispmanx-vnc (0.0~git20150807.ec37384) unstable; urgency=medium
+
+  * Update README.md
+
+ --  <patrik.olausson@gmail.com>  Wed, 8 Jul 2015 21:27:55 +0200
+
+dispmanx-vnc (0.0~git20150807.8f99d12) unstable; urgency=medium
+
+  * Change Makefile to use CXX and CXXFLAGS instead of CC and CFLAGS.
+    Will now only set CXX if not already set
+
+ --  <patrik.olausson@gmail.com>  Wed, 8 Jul 2015 19:19:39 +0000
+
+dispmanx-vnc (0.0~git20150807.234f289) unstable; urgency=medium
+
+  * Update README.md
+
+ --  <patrik.olausson@gmail.com>  Wed, 8 Jul 2015 20:15:24 +0200
+
+dispmanx-vnc (0.0~git20150607.d5f3daf) unstable; urgency=medium
+
+  * Added support for a hotkey to control downscaling from a VNC client.
+    Disabled for now
+
+ --  <patrik.olausson@gmail.com>  Mon, 6 Jul 2015 20:29:25 +0200
+
+dispmanx-vnc (0.0~git20153105.ca639a8) unstable; urgency=medium
+
+  * Added the downscale option to the example configuration file
+
+ --  <patrik.olausson@gmail.com>  Sun, 31 May 2015 14:06:42 +0200
+
+dispmanx-vnc (0.0~git20151104.bdb7a51) unstable; urgency=medium
+
+  * Fixed minor screen corruption that happened in black areas when
+    screen resolution was changed while no user was connected
+
+ --  <patrik.olausson@gmail.com>  Sat, 11 Apr 2015 14:38:24 +0200
+
+dispmanx-vnc (0.0~git20150604.1fddb66) unstable; urgency=medium
+
+  * Added option to scale down the screen in vnc to a quarter of the
+    physical screen. Good for e.g. controlling Kodi remotely
+
+ --  <patrik.olausson@gmail.com>  Mon, 6 Apr 2015 20:37:36 +0200
+
+dispmanx-vnc (0.0~git20150604.ca97cdf) unstable; urgency=medium
+
+  * Fixed overriding config file arguments with command line arguments
+
+ --  <patrik.olausson@gmail.com>  Mon, 6 Apr 2015 19:00:13 +0200
+
+dispmanx-vnc (0.0~git20150604.ee0460c) unstable; urgency=medium
+
+  * Added support for reading a configuration file. All settings that
+    are available on the command line may be specified in the config
+    file. See the attached .conf.sample file. The default name of the
+    config file is the same as of the binary with the extension .conf .
+    The program will first look in the same folder as the binary is
+    placed if not found there it will try etc . The configuration file
+    namd and location may be specified with the config file command line
+    parameter. Any command line arguments will override those of the
+    config file. Compilation now requires the libconfig dev package
+
+ --  <patrik.olausson@gmail.com>  Mon, 6 Apr 2015 16:30:57 +0200
+
+dispmanx-vnc (0.0~git20150604.5165399) unstable; urgency=medium
+
+  * Implemented an idling algorithm where the frame rate will be
+    gradually lowered if no changes are detected for more than a second
+    to save CPU cycles. The target frame rate will be restored whenever
+    an event occurs or a change is detected
+
+ --  <patrik.olausson@gmail.com>  Mon, 6 Apr 2015 13:40:41 +0200
+
+dispmanx-vnc (0.0~git20150504.4fb92f7) unstable; urgency=medium
+
+  * Added parameter to specify target frame rate
+
+ --  <patrik.olausson@gmail.com>  Sun, 5 Apr 2015 18:51:10 +0200
+
+dispmanx-vnc (0.0~git20150504.50a4f12) unstable; urgency=medium
+
+  * Now terminates nicely also when running as a service
+
+ --  <patrik.olausson@gmail.com>  Sun, 5 Apr 2015 15:26:54 +0200
+
+dispmanx-vnc (0.0~git20150404.1ae3e1d) unstable; urgency=medium
+
+  * Changed keyboard repeat handling to use standard uinput
+    functionality
+
+ --  <patrik.olausson@gmail.com>  Sat, 4 Apr 2015 19:49:07 +0200
+
+dispmanx-vnc (0.0~git20150104.bd41b08) unstable; urgency=medium
+
+  * Fixed keyboard repeat
+
+ --  <patrik.olausson@gmail.com>  Wed, 1 Apr 2015 23:37:19 +0200
+
+dispmanx-vnc (0.0~git20150104.89a82db) unstable; urgency=medium
+
+  * Changed default parameters
+
+ --  <patrik.olausson@gmail.com>  Wed, 1 Apr 2015 20:54:14 +0200
+
+dispmanx-vnc (0.0~git20150104.762ceed) unstable; urgency=medium
+
+  * Implemented a region map that is used in bandwidth mode to further
+    limit the amount of data passed to vnc clients. This gives a
+    substantially better performance in e.g. Kodi menus
+
+ --  <patrik.olausson@gmail.com>  Wed, 1 Apr 2015 20:12:57 +0200
+
+dispmanx-vnc (0.0~git20150104.0863af0) unstable; urgency=medium
+
+  * Added proper parameter handling and help
+
+ --  <patrik.olausson@gmail.com>  Wed, 1 Apr 2015 15:12:52 +0200
+
+dispmanx-vnc (0.0~git20153103.f22304b) unstable; urgency=medium
+
+  * Added cpp files to the hh files
+
+ --  <patrik.olausson@gmail.com>  Tue, 31 Mar 2015 09:05:31 +0200
+
+dispmanx-vnc (0.0~git20153003.4a78b55) unstable; urgency=medium
+
+  * Split up the main.cpp file into respective subclass headers for now
+
+ --  <fredrikandersson@mac.com>  Mon, 30 Mar 2015 22:59:27 +0000
+
+dispmanx-vnc (0.0~git20153003.33a1078) unstable; urgency=medium
+
+  * Syntax fixes
+
+ --  <fredrikandersson@mac.com>  Mon, 30 Mar 2015 22:19:17 +0000
+
+dispmanx-vnc (0.0~git20153003.6846cbf) unstable; urgency=medium
+
+  * Updated the readme
+
+ --  <fredrikandersson@mac.com>  Mon, 30 Mar 2015 22:18:19 +0000
+
+dispmanx-vnc (0.0~git20153003.8a22851) unstable; urgency=medium
+
+  * Created a proper makefile
+
+ --  <fredrikandersson@mac.com>  Mon, 30 Mar 2015 22:03:44 +0000
+
+dispmanx-vnc (0.0~git20153003.23ecc03) unstable; urgency=medium
+
+  * Merge pull request 2 from patrikolausson master
+
+ --  <fredrikandersson@mac.com>  Mon, 30 Mar 2015 23:33:09 +0200
+
+dispmanx-vnc (0.0~git20153003.d25d360) unstable; urgency=medium
+
+  * Added a bandwidthMode that also analyzes the x axis to limit the
+    amount of data transmitted while keeping almost top performance. Is
+    probably the ideal choice for anything but fullscreen changes like
+    fullscreen video
+
+ --  <patrik.olausson@gmail.com>  Mon, 30 Mar 2015 20:15:44 +0200
+
+dispmanx-vnc (0.0~git20153003.12847b9) unstable; urgency=medium
+
+  * Removed unused variables
+
+ --  <patrik.olausson@gmail.com>  Mon, 30 Mar 2015 17:51:13 +0200
+
+dispmanx-vnc (0.0~git20153003.c86c6a5) unstable; urgency=medium
+
+  * Set Wall build flag and removed warnings
+
+ --  <patrik.olausson@gmail.com>  Mon, 30 Mar 2015 16:08:53 +0200
+
+dispmanx-vnc (0.0~git20153003.361bceb) unstable; urgency=medium
+
+  * Merged https github.com patrikolausson dispmanx_vnc.git
+
+ --  <fredrikandersson@mac.com>  Mon, 30 Mar 2015 00:24:43 +0200
+
+dispmanx-vnc (0.0~git20153003.e1aea63) unstable; urgency=medium
+
+  * Merged patrikolausson master
+
+ --  <fredrikandersson@mac.com>  Mon, 30 Mar 2015 00:22:47 +0200
+
+dispmanx-vnc (0.0~git20152903.7b886e8) unstable; urgency=medium
+
+  * Changed the desktopName to something useful
+
+ --  <patrik.olausson@gmail.com>  Sun, 29 Mar 2015 15:05:29 +0200
+
+dispmanx-vnc (0.0~git20152903.5ae4660) unstable; urgency=medium
+
+  * Added options to specify password and port on the command line
+
+ --  <patrik.olausson@gmail.com>  Sun, 29 Mar 2015 14:45:48 +0200
+
+dispmanx-vnc (0.0~git20152903.e649df1) unstable; urgency=medium
+
+  * Added support for changing resolution on the fly fixed memory leak
+    used stl algorithm for comparing lines
+
+ --  <patrik.olausson@gmail.com>  Sun, 29 Mar 2015 14:03:58 +0200
+
+dispmanx-vnc (0.0~git20152803.849ae06) unstable; urgency=medium
+
+  * Merged parts of the change detection implemented by Na1w which gave
+    an extreme improvement on CPU usage
+
+ --  <patrik.olausson@gmail.com>  Sat, 28 Mar 2015 21:12:22 +0100
+
+dispmanx-vnc (0.0~git20152803.4d751c3) unstable; urgency=medium
+
+  * AA
+
+ --  <patrik.olausson@gmail.com>  Sat, 28 Mar 2015 20:58:57 +0100
+
+dispmanx-vnc (0.0~git20152803.3abb73a) unstable; urgency=medium
+
+  * Update and rename main.c to main.cpp
+
+ --  <patrik.olausson@gmail.com>  Sat, 28 Mar 2015 20:54:12 +0100
+
+dispmanx-vnc (0.0~git20150803.5314f9e) unstable; urgency=medium
+
+  * Removed debug prints
+
+ --  <fredrikandersson@mac.com>  Sun, 8 Mar 2015 08:16:46 +0100
+
+dispmanx-vnc (0.0~git20150803.5348464) unstable; urgency=medium
+
+  * Bug fix in boundary calculation
+
+ --  <fredrikandersson@mac.com>  Sun, 8 Mar 2015 08:12:35 +0100
+
+dispmanx-vnc (0.0~git20150803.a7b44f9) unstable; urgency=medium
+
+  * Initial commit
+
+ --  <fredrikandersson@mac.com>  Sun, 8 Mar 2015 07:22:58 +0100
+
+dispmanx-vnc (0.0~git20131109.64d208d) unstable; urgency=medium
+
+  * Added maximums for absolute mode. Fixes weston crash
+
+ --  <hanzelpeter@gmail.com>  Wed, 11 Sep 2013 21:14:18 +0200
+
+dispmanx-vnc (0.0~git20131807.c1b226f) unstable; urgency=medium
+
+  * Added info about command line arguments
+
+ --  <hanzelpeter@gmail.com>  Thu, 18 Jul 2013 16:58:21 +0200
+
+dispmanx-vnc (0.0~git20131807.a711980) unstable; urgency=medium
+
+  * Added options for relative or absolute mouse
+
+ --  <hanzelpeter@gmail.com>  Thu, 18 Jul 2013 16:46:00 +0200
+
+dispmanx-vnc (0.0~git20131607.6fef6c4) unstable; urgency=medium
+
+  * Aligned rows to 32 bit boundaries
+
+ --  <andrew@rpi512.(none)>  Tue, 16 Jul 2013 23:04:14 +1000
+
+dispmanx-vnc (0.0~git20131507.bcca7ad) unstable; urgency=medium
+
+  * Initial version
+
+ --  <hanzelpeter@gmail.com>  Mon, 15 Jul 2013 19:50:34 +0200
+
+dispmanx-vnc (0.0~git20131507.593b96b) unstable; urgency=medium
+
+  * Initial commit
+
+ --  <hanzelpeter@gmail.com>  Mon, 15 Jul 2013 10:23:01 -0700

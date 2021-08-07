@@ -1,0 +1,18 @@
+[Unit]
+Description=VNC Server for Raspberry Pi using dispmanx
+
+[Service]
+Environment=REQ_MEM=16
+Environment=ARGS="--inetd --once"
+Type=simple
+ExecStartPre=sh -c 'arm_mem=`vcgencmd get_mem arm | egrep -o '[0-9]+'`; gpu_mem=`vcgencmd get_mem gpu | egrep -o \'[0-9]+\'`; total_mem=$((arm_mem+gpu_mem)); config_mem=`grep -Pom1 \'^gpu_mem_\'$${total_mem}\'=\K[0-9]+\' /boot/config.txt || grep -Pom1 \'^gpu_mem=\K[0-9]+\' /boot/config.txt`; [ $${gpu_mem} -ge ${REQ_MEM} ] || (logger -t systemd "%N requires at least ${REQ_MEM}MB allocated to GPU\nCurrently allocated: $${gpu_mem}MB; Configured in /boot/config.txt: $${config_mem}MB" && exit 1)'
+ExecStart=/usr/bin/%p $ARGS
+RemainAfterExit=no
+StandardInput=socket
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+Also=dispmanx_vnc.socket
+

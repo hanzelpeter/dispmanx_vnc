@@ -1,0 +1,6 @@
+#!/usr/bin/dh-exec
+dispmanx_vncserver => /usr/bin/dispmanx_vnc
+dispmanx_vncserver.conf.sample usr/share/doc/dispmanx_vnc
+README.md => /usr/share/doc/dispmanx_vnc/README
+debian/dispmanx_vnc@.service lib/systemd/system
+debian/dispmanx_vnc.socket lib/systemd/system
