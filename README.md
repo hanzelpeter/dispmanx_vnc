@@ -14,6 +14,8 @@ Features
 - Stable even when changing resolution
 - Password support
 - Configurable port number
+- Inetd support
+- Supports listening for new clients or terminating server when a client disconnects
 - Configurable target frame rate, with automatic frame rate reduction down to 2/second when no updates are detected.
 - Adaptable algorithm for the best performance both for update intensive applications like video and animations, and low CPU usage for updates to smaller regions of the screen
 - Supports efficient downscaling to a quarter of the resoltion on the server side. Saves CPU, bandwidth and is practical for remote control of e.g. Kodi in high resolution from a computer with lower resolution
@@ -67,8 +69,10 @@ Parameters
 	-c, --config-file=FILE       use the specified configuration file
 	-d, --downscale              downscales the screen to a quarter in vnc
 	-f, --fullscreen             always runs fullscreen mode
+	-i, --inetd                  stdio instead of listening socket
 	-l, --localhost              only listens to local ports
 	-m, --multi-threaded         runs vnc in a separate thread
+	-o, --once                   connect once, then terminate
 	-p, --port=PORT              makes vnc available on the speficied port
 	-P, --password=PASSWORD      protects the session with PASSWORD
 	-r, --relative               relative mouse movements
