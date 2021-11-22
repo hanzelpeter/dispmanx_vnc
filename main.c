@@ -86,6 +86,7 @@ int TakePicture(unsigned char *buffer)
 	static int last_line=0, fps=0, fcount=0;
 	int line=0;
 	int i,j;
+	int offset;
 	struct timeval now;
 	int found;
 
@@ -164,9 +165,29 @@ int TakePicture(unsigned char *buffer)
 			unsigned short         B5 = tbi & 0x1f;
 
 			tbi = (B5 << 10) | (G5 << 5) | R5;
-
-			buffer_p[j*padded_width +i] = tbi;
+			offset = j*padded_width + i;
+			if (info.transform == 2)
+				offset = (-j+info.height-1)*padded_width + (-i +padded_width-1);
+			buffer_p[offset] = tbi;
 		}
+	}
+	if (info.transform == 2) {
+
+	r_x0 = -r_x0 + padded_width;
+	r_x1 = -r_x1 + padded_width;
+	r_y0 = -r_y0 + info.height;
+	r_y1 = -r_y1 + info.height;
+	if (r_x0 > r_x1) {
+		i = r_x1;
+		r_x1 = r_x0;
+		r_x0 = i;
+	}
+	if (r_y0 > r_y1) {
+		i = r_y1;
+		r_y1 = r_y0;
+		r_y0 = i;
+	}
+
 	}
 
 	/* swap image and back_image buffers */
@@ -191,9 +212,9 @@ int TakePicture(unsigned char *buffer)
 		fcount = 0;
 	}
 	last_line = line;
-	fprintf(stderr,"%03d/%03d Picture (%03d fps) ", line, info.height, fps);
+	//fprintf(stderr,"%03d/%03d Picture (%03d fps) ", line, info.height, fps);
 
-	fprintf(stderr, "x0=%d, y0=%d, x1=%d, y1=%d              \r", r_x0, r_y0, r_x1, r_y1); 
+	//fprintf(stderr, "x0=%d, y0=%d, x1=%d, y1=%d              \r", r_x0, r_y0, r_x1, r_y1); 
 	/* success!   We have a new picture! */
 	return (1==1);
 }
@@ -620,7 +641,7 @@ int main(int argc, char *argv[])
 	padded_width = pitch/BPP;
 
 	printf( "Display is %d x %d\n", info.width, info.height );
-
+	printf("Rotate is %d\n", info.transform);
 	image = calloc( 1, pitch * info.height );
 
 	assert(image);
