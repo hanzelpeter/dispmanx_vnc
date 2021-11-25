@@ -40,6 +40,7 @@ void 			   *back_image;
 int padded_width;
 int pitch;
 int r_x0, r_y0, r_x1, r_y1;
+int ur_x0, ur_y0, ur_x1, ur_y1;
 
 /* for compatibility of non-android systems */
 #ifndef ANDROID
@@ -168,26 +169,47 @@ int TakePicture(unsigned char *buffer)
 			offset = j*padded_width + i;
 			if (info.transform == 2)
 				offset = (-j+info.height-1)*padded_width + (-i +padded_width-1);
+			
+			if (info.transform == 3)
+				offset = i*info.height + info.height-1-j; 
+			;
 			buffer_p[offset] = tbi;
 		}
 	}
+	ur_x0 = r_x0;
+	ur_y0 = r_y0;
+	ur_x1 = r_x1;
+	ur_y1 = r_y1;
+
 	if (info.transform == 2) {
 
-	r_x0 = -r_x0 + padded_width;
-	r_x1 = -r_x1 + padded_width;
-	r_y0 = -r_y0 + info.height;
-	r_y1 = -r_y1 + info.height;
-	if (r_x0 > r_x1) {
-		i = r_x1;
-		r_x1 = r_x0;
-		r_x0 = i;
+	ur_x0 = -r_x0 + padded_width;
+	ur_x1 = -r_x1 + padded_width;
+	ur_y0 = -r_y0 + info.height;
+	ur_y1 = -r_y1 + info.height;
+	if (ur_x0 > ur_x1) {
+		i = ur_x1;
+		ur_x1 = ur_x0;
+		ur_x0 = i;
 	}
-	if (r_y0 > r_y1) {
-		i = r_y1;
-		r_y1 = r_y0;
-		r_y0 = i;
+	if (ur_y0 > ur_y1) {
+		i = ur_y1;
+		ur_y1 = ur_y0;
+		ur_y0 = i;
 	}
 
+	}
+
+	if (info.transform == 3) {
+		ur_x0 = -r_y0 + info.height -1;
+		ur_x1 = -r_y1 + info.height -1;
+		if (ur_x0 > ur_x1) {
+			i = ur_x1;
+			ur_x1 = ur_x0;
+			ur_x0 = i;
+		}
+		ur_y0 = r_x0;
+		ur_y1 = r_x1;
 	}
 
 	/* swap image and back_image buffers */
@@ -607,7 +629,7 @@ int main(int argc, char *argv[])
 
 	int             		ret, end, x;
 	long usec;
-
+	int w,h;
 	uint32_t        screen = 0;
 
 	for (x=1; x<argc; x++) {
@@ -661,7 +683,14 @@ int main(int argc, char *argv[])
 	last_x = padded_width / 2;
 	last_y = info.height / 2;
 
-	rfbScreenInfoPtr server=rfbGetScreen(&argc,argv,padded_width,info.height,5,3,BPP);
+	w = padded_width;
+	h = info.height;
+	if (info.transform & 1) {
+		x = h;
+		h = w;
+		w = x;
+	}
+	rfbScreenInfoPtr server=rfbGetScreen(&argc,argv,w,h,5,3,BPP);
 	if(!server)
 		return 0;
 	server->desktopName = "VNC server via dispmanx";
@@ -689,7 +718,8 @@ int main(int argc, char *argv[])
 	while (rfbIsActive(server)) {
 		if (TimeToTakePicture())
 			if (TakePicture((unsigned char *)server->frameBuffer))
-				rfbMarkRectAsModified(server,r_x0,r_y0,r_x1, r_y1);
+				rfbMarkRectAsModified(server,ur_x0,ur_y0,ur_x1,ur_y1);
+
 
 		usec = server->deferUpdateTime*1000;
 		rfbProcessEvents(server,usec);
